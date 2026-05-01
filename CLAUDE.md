@@ -119,13 +119,33 @@ All database operations are in `src/lib/db.ts`:
 **Statistics:**
 - `getWeddingStats(weddingId)` - Returns total/accepted/declined/pending/maybe counts and response percentage
 
-## Important Notes
+## Authentication with NextAuth.js v5
 
-### Authentication
-- `getSession()` in `lib/auth.ts` retrieves current user session
-- Used in layouts to protect routes with `redirect('/auth/signin')`
-- Session uses HTTP-only cookies
-- **TODO**: Implement proper JWT or session token validation with actual cookie signing
+**Configuration:** `src/auth.ts`
+- Credentials provider with MongoDB User storage
+- JWT-based session strategy (30-day expiration)
+- HTTP-only secure cookies
+- Automatic middleware protection of `/dashboard/*` routes
+
+**Key Files:**
+- `src/auth.ts` - NextAuth configuration with Credentials provider
+- `src/middleware.ts` - Route protection middleware
+- `src/app/api/auth/[...nextauth]/route.ts` - NextAuth API handlers
+- `src/app/api/auth/register/route.ts` - Custom signup endpoint
+- `src/app/layout.tsx` - SessionProvider wrapper
+- `src/components/SignOutButton.tsx` - Sign out button component
+- Auth pages: `/auth/signin`, `/auth/signup`, `/auth/error`
+
+**Authentication Flow:**
+1. **Signup:** User registers at `/auth/signup` → API creates user in MongoDB → Redirects to signin
+2. **Login:** User signs in at `/auth/signin` → Credentials provider validates → JWT created → Redirects to dashboard
+3. **Protected Routes:** Middleware redirects unauthenticated users to signin with callbackUrl
+4. **Logout:** SignOutButton clears session and redirects to home
+
+**Session Usage:**
+- Server components: `const session = await auth();`
+- Client components: `const { data: session } = useSession();`
+- Session contains: id, email, name, image
 
 ### Database
 - Connection pooling implemented in `lib/mongodb.ts` (singleton pattern)
@@ -166,11 +186,13 @@ Creates:
 
 ## Next Steps for Development
 
-1. **Auth System**
-   - Implement JWT tokens or session cookies properly
-   - Add email verification
-   - Add password reset flow
-   - Add OAuth providers (Google, GitHub)
+1. **Auth System** (DONE - NextAuth.js v5 with Credentials provider)
+   - ✅ JWT tokens with secure HTTP-only cookies
+   - ✅ Password hashing with bcryptjs
+   - ✅ Session management
+   - TODO: Add email verification
+   - TODO: Add password reset flow
+   - TODO: Add OAuth providers (Google, GitHub)
 
 2. **Features**
    - Create/edit/delete weddings UI

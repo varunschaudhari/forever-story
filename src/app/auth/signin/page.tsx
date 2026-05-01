@@ -2,12 +2,18 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { signIn } from 'next-auth/react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function SignInPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -15,17 +21,19 @@ export default function SignInPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
       });
 
-      if (!response.ok) {
-        throw new Error('Sign in failed');
+      if (!result?.ok) {
+        setError(result?.error || 'Invalid email or password');
+        return;
       }
 
-      window.location.href = '/dashboard';
+      router.push(callbackUrl);
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -62,6 +70,7 @@ export default function SignInPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="you@example.com"
+                disabled={loading}
               />
             </div>
 
@@ -77,13 +86,14 @@ export default function SignInPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="••••••••"
+                disabled={loading}
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn btn-primary disabled:opacity-50"
+              className="w-full btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>

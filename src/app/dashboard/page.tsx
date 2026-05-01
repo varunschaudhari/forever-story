@@ -1,27 +1,25 @@
-import { getSession } from '@/lib/auth';
+import { auth } from '@/auth';
 import Link from 'next/link';
 
 export default async function DashboardPage() {
-  const session = await getSession();
-
-  if (!session) {
-    return null;
-  }
+  const session = await auth();
 
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome back, {session.name}!</h1>
-        <p className="text-gray-600">Here&apos;s what&apos;s happening in your ForeverStory account.</p>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          Welcome back, {session?.user?.name}!
+        </h1>
+        <p className="text-gray-600">Manage your weddings and track RSVPs all in one place.</p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid md:grid-cols-4 gap-6 mb-8">
         {[
-          { label: 'Total Stories', value: '0', icon: '📖' },
-          { label: 'Total Views', value: '0', icon: '👁️' },
-          { label: 'Shared With', value: '0', icon: '👥' },
-          { label: 'Storage Used', value: '0 MB', icon: '💾' },
+          { label: 'Total Weddings', value: '0', icon: '💍' },
+          { label: 'Total Guests', value: '0', icon: '👥' },
+          { label: 'RSVPs Received', value: '0', icon: '✉️' },
+          { label: 'Response Rate', value: '0%', icon: '📊' },
         ].map((stat) => (
           <div key={stat.label} className="bg-white rounded-lg shadow p-6">
             <div className="text-4xl mb-2">{stat.icon}</div>
@@ -35,34 +33,25 @@ export default async function DashboardPage() {
       <div className="bg-white rounded-lg shadow p-8 mb-8">
         <h2 className="text-2xl font-bold mb-6">Quick Actions</h2>
         <div className="flex gap-4 flex-wrap">
-          <Link
-            href="#"
-            className="btn btn-primary"
-          >
-            + New Story
+          <Link href="/dashboard/weddings/new" className="btn btn-primary">
+            + Create Wedding
           </Link>
-          <Link
-            href="/dashboard/stories"
-            className="btn btn-secondary"
-          >
-            View All Stories
+          <Link href="/dashboard/weddings" className="btn btn-secondary">
+            View All Weddings
           </Link>
-          <Link
-            href="/dashboard/settings"
-            className="btn btn-secondary"
-          >
+          <Link href="/dashboard/settings" className="btn btn-secondary">
             Settings
           </Link>
         </div>
       </div>
 
-      {/* Recent Stories */}
+      {/* Recent Weddings */}
       <div className="bg-white rounded-lg shadow p-8">
-        <h2 className="text-2xl font-bold mb-6">Recent Stories</h2>
+        <h2 className="text-2xl font-bold mb-6">Recent Weddings</h2>
         <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-          <p className="text-gray-500 mb-4">No stories yet</p>
-          <Link href="#" className="btn btn-primary">
-            Create Your First Story
+          <p className="text-gray-500 mb-4">No weddings yet</p>
+          <Link href="/dashboard/weddings/new" className="btn btn-primary">
+            Create Your First Wedding
           </Link>
         </div>
       </div>

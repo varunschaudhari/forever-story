@@ -1,11 +1,7 @@
-import { getSession } from '@/lib/auth';
+import { auth } from '@/auth';
 
 export default async function SettingsPage() {
-  const session = await getSession();
-
-  if (!session) {
-    return null;
-  }
+  const session = await auth();
 
   return (
     <div>
@@ -47,7 +43,7 @@ export default async function SettingsPage() {
                 </label>
                 <input
                   type="text"
-                  defaultValue={session.name}
+                  defaultValue={session?.user?.name || ''}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   disabled
                 />
@@ -58,7 +54,7 @@ export default async function SettingsPage() {
                 </label>
                 <input
                   type="email"
-                  defaultValue={session.email}
+                  defaultValue={session?.user?.email || ''}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   disabled
                 />
@@ -77,7 +73,7 @@ export default async function SettingsPage() {
               </label>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" className="w-5 h-5" />
-                <span className="text-gray-700">Allow others to share my stories</span>
+                <span className="text-gray-700">Allow others to view my weddings</span>
               </label>
             </div>
           </div>

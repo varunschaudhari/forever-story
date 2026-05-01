@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { SessionProvider } from 'next-auth/react';
 
 export const metadata: Metadata = {
-  title: 'ForeverStory - Share Your Stories',
-  description: 'A SaaS platform to share and preserve your stories for generations to come.',
+  title: 'ForeverStory - Wedding Management Platform',
+  description: 'Manage your weddings and track RSVPs with ForeverStory.',
 };
 
 export default function RootLayout({
@@ -13,7 +14,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   );
 }

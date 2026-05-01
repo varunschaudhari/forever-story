@@ -1,7 +1,8 @@
 import { dbConnect } from '@/lib/mongodb';
 import { getWeddingsByUser, createWedding, getPublicWeddings } from '@/lib/db';
-import { apiResponse, apiError, AppError, validateRequired } from '@/lib/api';
-import { getSession } from '@/lib/auth';
+import { apiResponse, apiError, AppError } from '@/lib/api';
+import { weddingCreateSchema } from '@/lib/validation';
+import { auth } from '@/auth';
 import { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -20,12 +21,12 @@ export async function GET(request: NextRequest) {
       return apiResponse(result);
     }
 
-    const session = await getSession();
-    if (!session) {
+    const session = await auth();
+    if (!session?.user?.id) {
       throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
     }
 
-    const result = await getWeddingsByUser(session.id, page, limit);
+    const result = await getWeddingsByUser(session.user.id, page, limit);
     return apiResponse(result);
   } catch (error) {
     return apiError(error);
@@ -36,23 +37,36 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
 
-    const session = await getSession();
-    if (!session) {
+    const session = await auth();
+    if (!session?.user?.id) {
       throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
     }
 
     const body = await request.json();
 
-    validateRequired(body.title, 'Title');
-    validateRequired(body.date, 'Date');
-    validateRequired(body.venue, 'Venue');
+    // Validate request body
+    const validData = weddingCreateSchema.parse(body);
 
+    // Check if slug already exists
+    const { Wedding } = await import('@/models/Wedding');
+    const existingWedding = await Wedding.findOne({ slug: validData.slug });
+    if (existingWedding) {
+      throw new AppError('Wedding slug already exists', 409, 'DUPLICATE_SLUG');
+    }
+
+    // Create wedding
     const wedding = await createWedding({
-      ...body,
-      organizers: [session.id],
+      ...validData,
+      organizers: [session.user.id],
     });
 
-    return apiResponse(wedding, 201);
+    return apiResponse(
+      {
+        _id: wedding._id,
+        ...wedding.toObject(),
+      },
+      201
+    );
   } catch (error) {
     return apiError(error);
   }

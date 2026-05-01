@@ -33,7 +33,32 @@ export const venueSchema = z.object({
     .optional(),
 });
 
+export const eventSchema = z.object({
+  name: z.string().min(1, 'Event name is required').max(100),
+  type: z.enum(['ceremony', 'reception', 'dinner', 'party', 'custom']),
+  date: z.string().datetime('Invalid date format'),
+  time: z.string().regex(/^([0-1]\d|2[0-3]):([0-5]\d)$/, 'Time must be in HH:mm format'),
+  location: z.string().max(200).optional(),
+  description: z.string().max(500).optional(),
+});
+
+export const contactSchema = z.object({
+  name: z.string().min(1, 'Contact name is required').max(100),
+  relationship: z.enum(['groom', 'bride', 'family', 'friend', 'vendor']).optional(),
+  phone: z.string().regex(
+    /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/,
+    'Invalid phone number'
+  ).optional().or(z.literal('')),
+  email: z.string().email('Invalid email').optional().or(z.literal('')),
+});
+
 export const weddingCreateSchema = z.object({
+  slug: z.string()
+    .min(1, 'Wedding slug is required')
+    .max(100, 'Slug cannot exceed 100 characters')
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must contain only lowercase letters, numbers, and hyphens'),
+  groomName: z.string().min(1, 'Groom name is required').max(100),
+  brideName: z.string().min(1, 'Bride name is required').max(100),
   title: z.string().min(1, 'Title is required').max(200),
   description: z.string().max(2000).optional(),
   date: z.string().datetime('Invalid date format').refine(
@@ -41,6 +66,9 @@ export const weddingCreateSchema = z.object({
     'Wedding date must be in the future'
   ),
   venue: venueSchema,
+  events: z.array(eventSchema).optional(),
+  gallery: z.array(z.string().url()).optional(),
+  contacts: z.array(contactSchema).optional(),
   guestCount: z.number().int().min(0).default(0),
   budget: z.number().min(0).optional(),
   isPublic: z.boolean().default(false),
@@ -48,10 +76,16 @@ export const weddingCreateSchema = z.object({
 });
 
 export const weddingUpdateSchema = z.object({
+  slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
+  groomName: z.string().min(1).max(100).optional(),
+  brideName: z.string().min(1).max(100).optional(),
   title: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).optional(),
   date: z.string().datetime().optional(),
   venue: venueSchema.partial().optional(),
+  events: z.array(eventSchema).optional(),
+  gallery: z.array(z.string().url()).optional(),
+  contacts: z.array(contactSchema).optional(),
   guestCount: z.number().int().min(0).optional(),
   budget: z.number().min(0).optional(),
   isPublic: z.boolean().optional(),
@@ -60,6 +94,8 @@ export const weddingUpdateSchema = z.object({
 
 export type WeddingCreate = z.infer<typeof weddingCreateSchema>;
 export type WeddingUpdate = z.infer<typeof weddingUpdateSchema>;
+export type Event = z.infer<typeof eventSchema>;
+export type Contact = z.infer<typeof contactSchema>;
 
 // RSVP validation schemas
 export const mealPreferenceEnum = z.enum([

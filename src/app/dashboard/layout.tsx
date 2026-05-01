@@ -1,17 +1,13 @@
 import Link from 'next/link';
-import { getSession } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+import { auth } from '@/auth';
+import SignOutButton from '@/components/SignOutButton';
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getSession();
-
-  if (!session) {
-    redirect('/auth/signin');
-  }
+  const session = await auth();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -29,10 +25,10 @@ export default async function DashboardLayout({
             Dashboard
           </Link>
           <Link
-            href="/dashboard/stories"
+            href="/dashboard/weddings"
             className="block px-4 py-2 rounded-lg hover:bg-gray-800 transition"
           >
-            My Stories
+            My Weddings
           </Link>
           <Link
             href="/dashboard/settings"
@@ -45,13 +41,9 @@ export default async function DashboardLayout({
         <div className="absolute bottom-6 left-6 right-6">
           <div className="border-t border-gray-700 pt-4">
             <p className="text-sm text-gray-400 mb-3">Logged in as</p>
-            <p className="font-medium mb-4">{session.name}</p>
-            <Link
-              href="/api/auth/logout"
-              className="w-full block text-center px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition"
-            >
-              Sign Out
-            </Link>
+            <p className="font-medium mb-4">{session?.user?.name}</p>
+            <p className="text-xs text-gray-400 mb-4">{session?.user?.email}</p>
+            <SignOutButton />
           </div>
         </div>
       </aside>

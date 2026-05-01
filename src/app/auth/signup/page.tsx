@@ -2,18 +2,22 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -28,18 +32,24 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/signup', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || 'Sign up failed');
       }
 
-      window.location.href = '/dashboard';
+      setSuccess('Account created successfully! Redirecting to sign in...');
+
+      // Redirect to signin after a brief delay
+      setTimeout(() => {
+        router.push('/auth/signin');
+      }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -56,11 +66,17 @@ export default function SignUpPage() {
           </Link>
 
           <h1 className="text-2xl font-bold text-gray-900 mb-2 text-center">Create Account</h1>
-          <p className="text-gray-600 text-center mb-6">Start preserving your stories today</p>
+          <p className="text-gray-600 text-center mb-6">Start managing your weddings today</p>
 
           {error && (
             <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg text-sm">
               {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="mb-4 p-4 bg-green-50 text-green-700 rounded-lg text-sm">
+              {success}
             </div>
           )}
 
@@ -77,6 +93,7 @@ export default function SignUpPage() {
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="John Doe"
+                disabled={loading}
               />
             </div>
 
@@ -92,6 +109,7 @@ export default function SignUpPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="you@example.com"
+                disabled={loading}
               />
             </div>
 
@@ -107,6 +125,7 @@ export default function SignUpPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="••••••••"
+                disabled={loading}
               />
             </div>
 
@@ -122,13 +141,14 @@ export default function SignUpPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="••••••••"
+                disabled={loading}
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn btn-primary disabled:opacity-50"
+              className="w-full btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create Account'}
             </button>
