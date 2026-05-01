@@ -5,6 +5,9 @@ export interface IUser extends Document {
   email: string;
   password: string;
   name: string;
+  phone?: string;
+  avatar?: string;
+  bio?: string;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(password: string): Promise<boolean>;
@@ -31,12 +34,26 @@ const userSchema = new Schema<IUser>(
     name: {
       type: String,
       required: [true, 'Please provide a name'],
+      trim: true,
+    },
+    phone: {
+      type: String,
+      trim: true,
+    },
+    avatar: {
+      type: String,
+    },
+    bio: {
+      type: String,
+      maxlength: [500, 'Bio cannot be more than 500 characters'],
     },
   },
   {
     timestamps: true,
   }
 );
+
+userSchema.index({ email: 1 });
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
