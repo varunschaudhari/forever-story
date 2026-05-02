@@ -100,14 +100,20 @@ export default function LandingPage() {
             <p className="text-sm uppercase tracking-widest text-on-surface-variant mb-4">Our Features</p>
             <h2 className="heading-2 mb-6">Everything You Need</h2>
             <p className="text-lg text-on-surface-variant max-w-2xl mx-auto">
-              Create beautiful wedding websites and share memories with your guests
+              Everything for your perfect wedding website and guest management
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-12 max-w-2xl mx-auto">
+          <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-12">
             {[
               { icon: '💍', title: 'Stunning Websites', desc: 'Beautiful, mobile-responsive wedding pages' },
               { icon: '📸', title: 'Photo Gallery', desc: 'Share memories with your guests' },
+              { icon: '🗺️', title: 'Google Maps', desc: 'Open venue location on Google Maps' },
+              { icon: '💬', title: 'WhatsApp Share', desc: 'Share with pre-filled messages' },
+              { icon: '🔗', title: 'Custom URL', desc: 'varunwedspriya.foreverstory.in' },
+              { icon: '⏱️', title: 'Countdown Timer', desc: 'Days left until wedding' },
+              { icon: '📢', title: 'WhatsApp Broadcast', desc: 'One-click invite broadcast' },
+              { icon: '🏨', title: 'Travel Info', desc: 'Hotels, parking & directions' },
             ].map((feature) => (
               <div key={feature.title} className="group text-center">
                 <div className="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center mx-auto mb-6 group-hover:bg-primary-container transition-colors duration-500">
