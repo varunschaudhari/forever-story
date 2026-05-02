@@ -4,6 +4,7 @@ import { apiResponse, apiError, AppError } from '@/lib/api';
 import { weddingCreateSchema } from '@/lib/validation';
 import { auth } from '@/auth';
 import { NextRequest } from 'next/server';
+import { Types } from 'mongoose';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const isPublic = searchParams.get('public') === 'true';
-    const city = searchParams.get('city');
+    const city = searchParams.get('city') || undefined;
     const tags = searchParams.get('tags')?.split(',');
 
     if (isPublic) {
@@ -55,10 +56,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Create wedding
-    const wedding = await createWedding({
+    const weddingData = {
       ...validData,
-      organizers: [session.user.id],
-    });
+      date: new Date(validData.date),
+      events: validData.events?.map(event => ({
+        ...event,
+        date: new Date(event.date),
+      })),
+      organizers: [new Types.ObjectId(session.user.id)],
+    };
+
+    const wedding = await createWedding(weddingData);
 
     return apiResponse(
       {

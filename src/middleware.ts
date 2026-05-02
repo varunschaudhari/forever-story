@@ -1,12 +1,16 @@
-import { auth } from '@/auth';
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 
 const protectedRoutes = ['/dashboard'];
 const publicRoutes = ['/auth/signin', '/auth/signup', '/auth/error'];
 
-export default auth((req) => {
+/**
+ * Handle route protection
+ */
+export async function middleware(req: NextRequest) {
   const { nextUrl } = req;
-  const isLoggedIn = !!req.auth?.user;
+  const token = req.cookies.get('authjs.session-token')?.value;
+
+  const isLoggedIn = !!token;
 
   // Check if route is protected
   const isProtectedRoute = protectedRoutes.some((route) => nextUrl.pathname.startsWith(route));
@@ -23,9 +27,12 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-});
+}
 
 // Configure which routes to run middleware on
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };
+
+// Use Node.js runtime to support mongoose
+export const runtime = 'nodejs';

@@ -3,6 +3,7 @@ import { getRSVPsByWedding, createRSVP, getRSVPByEmailAndWedding } from '@/lib/d
 import { apiResponse, apiError, AppError, validateRequired, validateEmail } from '@/lib/api';
 import { getSession } from '@/lib/auth';
 import { NextRequest } from 'next/server';
+import { Types } from 'mongoose';
 
 export async function GET(
   request: NextRequest,
@@ -20,7 +21,7 @@ export async function GET(
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
 
-    const result = await getRSVPsByWedding(params.id, page, limit);
+    const result = await getRSVPsByWedding(new Types.ObjectId(params.id), page, limit);
     return apiResponse(result);
   } catch (error) {
     return apiError(error);
@@ -41,7 +42,8 @@ export async function POST(
     validateEmail(body.guestEmail);
 
     // Check if RSVP already exists
-    const existingRSVP = await getRSVPByEmailAndWedding(body.guestEmail, params.id);
+    const weddingId = new Types.ObjectId(params.id);
+    const existingRSVP = await getRSVPByEmailAndWedding(body.guestEmail, weddingId);
     if (existingRSVP) {
       throw new AppError(
         'RSVP already exists for this email',
@@ -52,10 +54,10 @@ export async function POST(
 
     // Get session for invitedBy field
     const session = await getSession();
-    const invitedBy = session?.id || undefined;
+    const invitedBy = session?.id ? new Types.ObjectId(session.id) : undefined;
 
     const rsvp = await createRSVP({
-      wedding: params.id,
+      wedding: weddingId,
       guestEmail: body.guestEmail.toLowerCase(),
       guestName: body.guestName,
       status: body.status || 'pending',

@@ -61,10 +61,7 @@ export const weddingCreateSchema = z.object({
   brideName: z.string().min(1, 'Bride name is required').max(100),
   title: z.string().min(1, 'Title is required').max(200),
   description: z.string().max(2000).optional(),
-  date: z.string().datetime('Invalid date format').refine(
-    (date) => new Date(date) > new Date(),
-    'Wedding date must be in the future'
-  ),
+  date: z.string().datetime('Invalid date format'),
   venue: venueSchema,
   events: z.array(eventSchema).optional(),
   gallery: z.array(z.string().url()).optional(),

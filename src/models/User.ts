@@ -8,6 +8,8 @@ export interface IUser extends Document {
   phone?: string;
   avatar?: string;
   bio?: string;
+  isProfilePublic: boolean;
+  allowViewWeddingStories: boolean;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(password: string): Promise<boolean>;
@@ -47,13 +49,20 @@ const userSchema = new Schema<IUser>(
       type: String,
       maxlength: [500, 'Bio cannot be more than 500 characters'],
     },
+    isProfilePublic: {
+      type: Boolean,
+      default: true,
+    },
+    allowViewWeddingStories: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-userSchema.index({ email: 1 });
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {

@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
+import '@/models/User'; // Ensure User model is registered for populate
 
 export interface IEvent {
   name: string;
@@ -164,12 +165,6 @@ const weddingSchema = new Schema<IWedding>(
     date: {
       type: Date,
       required: [true, 'Please provide a wedding date'],
-      validate: {
-        validator: function (value: Date) {
-          return value > new Date();
-        },
-        message: 'Wedding date must be in the future',
-      },
     },
     venue: {
       name: {
@@ -233,7 +228,6 @@ const weddingSchema = new Schema<IWedding>(
   }
 );
 
-weddingSchema.index({ slug: 1 }, { unique: true });
 weddingSchema.index({ organizers: 1 });
 weddingSchema.index({ date: 1 });
 weddingSchema.index({ isPublic: 1 });

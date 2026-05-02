@@ -1,7 +1,6 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
-import { dbConnect } from '@/lib/mongodb';
-import { User } from '@/models/User';
+import Google from 'next-auth/providers/google';
 import { z } from 'zod';
 
 const credentialsSchema = z.object({
@@ -11,6 +10,11 @@ const credentialsSchema = z.object({
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
+    Google({
+      clientId: process.env.GOOGLE_ID,
+      clientSecret: process.env.GOOGLE_SECRET,
+      allowDangerousEmailAccountLinking: true,
+    }),
     Credentials({
       name: 'Credentials',
       credentials: {
@@ -25,6 +29,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         try {
+          // Dynamically import server-side modules to avoid Edge Runtime issues
+          const { dbConnect } = await import('@/lib/mongodb');
+          const { User } = await import('@/models/User');
+
           await dbConnect();
 
           // Find user by email with password field
@@ -58,7 +66,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   pages: {
     signIn: '/auth/signin',
-    signUp: '/auth/signup',
     error: '/auth/error',
   },
   callbacks: {
