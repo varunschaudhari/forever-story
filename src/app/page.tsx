@@ -100,17 +100,14 @@ export default function LandingPage() {
             <p className="text-sm uppercase tracking-widest text-on-surface-variant mb-4">Our Features</p>
             <h2 className="heading-2 mb-6">Everything You Need</h2>
             <p className="text-lg text-on-surface-variant max-w-2xl mx-auto">
-              From elegant wedding websites to seamless RSVP management
+              Create beautiful wedding websites and share memories with your guests
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-12">
+          <div className="grid md:grid-cols-2 gap-12 max-w-2xl mx-auto">
             {[
               { icon: '💍', title: 'Stunning Websites', desc: 'Beautiful, mobile-responsive wedding pages' },
-              { icon: '✉️', title: 'RSVP Management', desc: 'Track guest responses effortlessly' },
               { icon: '📸', title: 'Photo Gallery', desc: 'Share memories with your guests' },
-              { icon: '💰', title: 'Budget Tracking', desc: 'Manage expenses and payments' },
-              { icon: '👥', title: 'Guest Directory', desc: 'Organize all your contacts' },
             ].map((feature) => (
               <div key={feature.title} className="group text-center">
                 <div className="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center mx-auto mb-6 group-hover:bg-primary-container transition-colors duration-500">
