@@ -60,7 +60,8 @@
       "Bash(git commit -m 'Make page content expand dynamically with sidebar using CSS variables *)",
       "Bash(git commit -m 'Add story type support: weddings, engagements, bridal showers *)",
       "Bash(git commit -m 'Enhance story card with functional Edit and Delete options *)",
-      "Bash(git commit -m 'Fix authorization for story edit and delete - allow createdBy partners *)"
+      "Bash(git commit -m 'Fix authorization for story edit and delete - allow createdBy partners *)",
+      "Bash(git commit -m 'Clean up old dashboard pages and remove redundant wedding routes *)"
     ]
   }
 }
