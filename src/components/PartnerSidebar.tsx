@@ -12,8 +12,8 @@ export default function PartnerSidebar() {
 
   const navItems = [
     { label: 'Dashboard', icon: '📊', href: '/partner/dashboard' },
+    { label: 'Stories', icon: '📖', href: '/partner/stories' },
     { label: 'Customers', icon: '👥', href: '/partner/customers' },
-    { label: 'Earnings', icon: '💰', href: '/partner/earnings' },
     { label: 'Settings', icon: '⚙️', href: '/partner/settings' },
   ];
 

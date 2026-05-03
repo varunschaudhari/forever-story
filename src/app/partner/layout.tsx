@@ -8,7 +8,7 @@ export const metadata = {
   title: 'Partner Dashboard - ForeverStory',
 };
 
-export default async function PartnerDashboardLayout({
+export default async function PartnerLayout({
   children,
 }: {
   children: React.ReactNode;
