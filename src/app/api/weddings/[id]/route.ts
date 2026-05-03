@@ -44,9 +44,12 @@ export async function PATCH(
       throw new AppError('Wedding not found', 404, 'NOT_FOUND');
     }
 
-    // Check if user is an organizer
-    if (!wedding.organizers.some((id: any) => id.toString() === session.user!.id)) {
-      throw new AppError('Not authorized to update this wedding', 403, 'FORBIDDEN');
+    // Check if user is an organizer or the partner who created it
+    const isOrganizer = wedding.organizers.some((id: any) => id.toString() === session.user!.id);
+    const isCreator = wedding.createdBy?.toString() === session.user!.id;
+
+    if (!isOrganizer && !isCreator) {
+      throw new AppError('Not authorized to update this story', 403, 'FORBIDDEN');
     }
 
     const body = await request.json();
@@ -91,9 +94,12 @@ export async function DELETE(
       throw new AppError('Wedding not found', 404, 'NOT_FOUND');
     }
 
-    // Check if user is an organizer
-    if (!wedding.organizers.some((id: any) => id.toString() === session.user!.id)) {
-      throw new AppError('Not authorized to delete this wedding', 403, 'FORBIDDEN');
+    // Check if user is an organizer or the partner who created it
+    const isOrganizer = wedding.organizers.some((id: any) => id.toString() === session.user!.id);
+    const isCreator = wedding.createdBy?.toString() === session.user!.id;
+
+    if (!isOrganizer && !isCreator) {
+      throw new AppError('Not authorized to delete this story', 403, 'FORBIDDEN');
     }
 
     const deleted = await deleteWedding(params.id);
