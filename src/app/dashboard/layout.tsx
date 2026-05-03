@@ -21,8 +21,13 @@ export default async function DashboardLayout({
     <div className="min-h-screen bg-surface">
       <DashboardSidebar />
 
-      {/* Main Content with margin to account for fixed sidebar */}
-      <main className="ml-20 transition-all duration-300">
+      {/* Main Content with dynamic margin based on sidebar width */}
+      <main
+        className="transition-all duration-300"
+        style={{
+          marginLeft: 'var(--sidebar-width, 80px)',
+        }}
+      >
         {children}
       </main>
     </div>

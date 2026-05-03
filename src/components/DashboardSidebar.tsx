@@ -3,12 +3,16 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--sidebar-width', '80px');
+  }, []);
 
   const navItems = [
     { label: 'Dashboard', icon: '🏠', href: '/dashboard' },
@@ -27,8 +31,17 @@ export default function DashboardSidebar() {
       className={`fixed left-0 top-0 h-screen z-40 bg-surface-container-lowest border-r border-outline-variant flex flex-col transition-all duration-300 shadow-sm ${
         expanded ? 'w-72' : 'w-20'
       }`}
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
+      onMouseEnter={() => {
+        setExpanded(true);
+        document.documentElement.style.setProperty('--sidebar-width', '288px');
+      }}
+      onMouseLeave={() => {
+        setExpanded(false);
+        document.documentElement.style.setProperty('--sidebar-width', '80px');
+      }}
+      style={{
+        width: expanded ? '288px' : '80px',
+      }}
     >
       {/* Logo Section */}
       <div className={`flex items-center justify-center py-8 px-4 border-b border-outline-variant transition-all duration-300`}>
