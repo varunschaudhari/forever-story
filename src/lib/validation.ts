@@ -5,6 +5,8 @@ export const userSignupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
   email: z.string().email('Invalid email format'),
   password: z.string().min(6, 'Password must be at least 6 characters').max(128),
+  role: z.enum(['customer', 'partner']).default('customer').optional(),
+  referredBy: z.string().optional(),
 });
 
 export const userUpdateSchema = z.object({
@@ -12,6 +14,7 @@ export const userUpdateSchema = z.object({
   phone: z.string().max(20).optional(),
   avatar: z.string().url().optional(),
   bio: z.string().max(500).optional(),
+  role: z.enum(['customer', 'partner']).optional(),
 });
 
 export type UserSignup = z.infer<typeof userSignupSchema>;
@@ -61,16 +64,18 @@ export const weddingCreateSchema = z.object({
   brideName: z.string().min(1, 'Bride name is required').max(100),
   title: z.string().min(1, 'Title is required').max(200),
   description: z.string().max(2000).optional(),
-  date: z.string().datetime('Invalid date format'),
+  coverImage: z.string().optional(),
+  date: z.string(),
   venue: venueSchema,
   events: z.array(eventSchema).optional(),
-  gallery: z.array(z.string().url()).optional(),
+  gallery: z.array(z.string()).optional(),
   contacts: z.array(contactSchema).optional(),
   guestCount: z.number().int().min(0).default(0),
   budget: z.number().min(0).optional(),
   isPublic: z.boolean().default(false),
+  template: z.string().optional(),
   tags: z.array(z.string().toLowerCase()).optional(),
-});
+}).passthrough();
 
 export const weddingUpdateSchema = z.object({
   slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
@@ -78,16 +83,18 @@ export const weddingUpdateSchema = z.object({
   brideName: z.string().min(1).max(100).optional(),
   title: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).optional(),
-  date: z.string().datetime().optional(),
+  coverImage: z.string().optional(),
+  date: z.string().optional(),
   venue: venueSchema.partial().optional(),
   events: z.array(eventSchema).optional(),
-  gallery: z.array(z.string().url()).optional(),
+  gallery: z.array(z.string()).optional(),
   contacts: z.array(contactSchema).optional(),
   guestCount: z.number().int().min(0).optional(),
   budget: z.number().min(0).optional(),
   isPublic: z.boolean().optional(),
   tags: z.array(z.string().toLowerCase()).optional(),
-});
+  template: z.string().optional(),
+}).passthrough();
 
 export type WeddingCreate = z.infer<typeof weddingCreateSchema>;
 export type WeddingUpdate = z.infer<typeof weddingUpdateSchema>;

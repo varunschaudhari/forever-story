@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m 'Remove budget tracking, guest directory, and RSVP management from features *)",
+      "Bash(git commit -m 'Add comprehensive features list to landing page *)",
+      "Bash(git commit -m 'Replace WhatsApp emoji with official SVG logos *)",
+      "Bash(git commit -m 'Update WhatsApp icons with proper official logo design *)",
+      "PowerShell($file = \"src/components/WeddingBuilder.tsx\"; \\(Get-Content $file -TotalCount 830\\) | Set-Content $file)",
+      "PowerShell(\\(Get-Content 'c:\\\\Users\\\\varun.chaudhari.CUBEHIGHWAYS\\\\projects\\\\forever-story\\\\src\\\\components\\\\WeddingBuilder.tsx' | Measure-Object -Line\\).Lines)",
+      "Bash(Get-ChildItem -Path \"src/app/weddings\" -Directory)",
+      "Bash(Select-Object Name)",
+      "PowerShell(try { $response = Invoke-WebRequest -Uri \"http://localhost:3001/auth/signin?role=customer\" -UseBasicParsing; if \\($response.StatusCode -eq 200\\) { Write-Host \"✓ Page loaded successfully \\(200\\)\"; if \\($response.Content -match '<form'\\) { Write-Host \"✓ Form found in HTML\" } else { Write-Host \"✗ No form found in HTML\" } } else { Write-Host \"✗ Status code: $\\($response.StatusCode\\)\" } } catch { Write-Host \"✗ Error: $\\($_.Exception.Message\\)\" })",
+      "PowerShell(Start-Sleep -Seconds 5; try { $response = Invoke-WebRequest -Uri \"http://localhost:3001/auth/signin?role=customer\" -UseBasicParsing -TimeoutSec 10; Write-Host \"✓ Page loaded \\(Status: $\\($response.StatusCode\\)\\)\"; if \\($response.Content -match '<form'\\) { Write-Host \"✓ Form HTML found\"; if \\($response.Content -match 'value=\"email\"'\\) { Write-Host \"✓ Email input found\" } } } catch { Write-Host \"✗ Error: $\\($_.Exception.Message.Substring\\(0, [Math]::Min\\(150, $_.Exception.Message.Length\\)\\)\\)\" })",
+      "PowerShell(Start-Sleep -Seconds 10; try { $response = Invoke-WebRequest -Uri \"http://localhost:3001/auth/signin?role=customer\" -UseBasicParsing -TimeoutSec 5; Write-Host \"✓ Page loaded \\(Status: $\\($response.StatusCode\\)\\)\"; Write-Host \"✓ Content length: $\\($response.Content.Length\\) bytes\" } catch { Write-Host \"✗ Error: $\\($_.Exception.Message.Substring\\(0, 100\\)\\)\" })",
+      "PowerShell(try { $response = Invoke-WebRequest -Uri \"http://localhost:3001/auth/signin?role=customer\" -UseBasicParsing -TimeoutSec 5; Write-Host \"✓ Signin page loaded successfully!\" } catch { $err = $_.Exception.Message; if \\($err.Length -gt 100\\) { $err = $err.Substring\\(0, 100\\) }; Write-Host \"✗ Error: $err\" })",
+      "PowerShell(Start-Sleep -Seconds 15; try { $response = Invoke-WebRequest -Uri \"http://localhost:3001/auth/signin?role=customer\" -UseBasicParsing -TimeoutSec 10; Write-Host \"✓ Signin page loaded successfully!\"; if \\($response.Content -match 'Welcome Back'\\) { Write-Host \"✓ Found welcome message\" } } catch { Write-Host \"Error: $\\($_.Exception.Message\\)\" })",
+      "PowerShell(Start-Sleep -Seconds 20; try { $response = Invoke-WebRequest -Uri \"http://localhost:3001/auth/signin?role=customer\" -UseBasicParsing -TimeoutSec 5; Write-Host \"✓ Signin page loaded successfully!\"; if \\($response.Content -match 'Welcome Back'\\) { Write-Host \"✓ Contains welcome message\" } } catch { Write-Host \"Still loading...\" })"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\varun.chaudhari.CUBEHIGHWAYS\\projects\\forever-story\\src\\app\\weddings\\[id]",
+      "C:\\Users\\varun.chaudhari.CUBEHIGHWAYS\\projects\\forever-story\\src\\app\\weddings\\[slug]"
+    ]
+  }
+}

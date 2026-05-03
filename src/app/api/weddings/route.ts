@@ -58,10 +58,10 @@ export async function POST(request: NextRequest) {
     // Create wedding
     const weddingData = {
       ...validData,
-      date: new Date(validData.date),
-      events: validData.events?.map(event => ({
+      date: new Date(validData.date || new Date()),
+      events: validData.events?.map((event: any) => ({
         ...event,
-        date: new Date(event.date),
+        date: new Date(event.date || validData.date),
       })),
       organizers: [new Types.ObjectId(session.user.id)],
     };

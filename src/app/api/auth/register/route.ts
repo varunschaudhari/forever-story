@@ -3,6 +3,7 @@ import { User } from '@/models/User';
 import { apiResponse, apiError, AppError } from '@/lib/api';
 import { userSignupSchema } from '@/lib/validation';
 import { NextRequest } from 'next/server';
+import { Types } from 'mongoose';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,12 +21,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new user
-    const user = new User({
+    const userData: any = {
       email: validData.email.toLowerCase(),
       password: validData.password,
       name: validData.name,
-    });
+      role: validData.role || 'customer',
+    };
 
+    // If user was referred by a partner
+    if (validData.referredBy) {
+      const partnerId = new Types.ObjectId(validData.referredBy);
+      const partner = await User.findById(partnerId);
+      if (partner && partner.role === 'partner') {
+        userData.referredBy = partnerId;
+      }
+    }
+
+    const user = new User(userData);
     await user.save();
 
     // Return success without exposing password
@@ -34,6 +46,7 @@ export async function POST(request: NextRequest) {
         id: user._id.toString(),
         email: user.email,
         name: user.name,
+        role: user.role,
         message: 'User created successfully. You can now sign in.',
       },
       201

@@ -44,11 +44,11 @@ export default async function AdminPage() {
     stats.publishedWeddings = publishedCount;
 
     // Get recent weddings
-    recentWeddings = await Wedding.find()
+    recentWeddings = (await Wedding.find()
       .populate('organizers', 'name email avatar')
       .sort({ createdAt: -1 })
       .limit(5)
-      .lean();
+      .lean()) as any[];
 
     // Get top users by wedding count
     topUsers = await User.aggregate([

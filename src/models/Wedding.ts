@@ -25,6 +25,7 @@ export interface IWedding extends Document {
   title: string;
   description?: string;
   organizers: Types.ObjectId[]; // User IDs
+  createdBy?: Types.ObjectId; // Partner who created this wedding
   coverImage?: string;
   date: Date;
   venue: {
@@ -46,6 +47,7 @@ export interface IWedding extends Document {
   budget?: number;
   isPublic: boolean;
   tags?: string[];
+  template?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -151,6 +153,10 @@ const weddingSchema = new Schema<IWedding>(
         required: true,
       },
     ],
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
     coverImage: {
       type: String,
     },
@@ -222,6 +228,10 @@ const weddingSchema = new Schema<IWedding>(
         lowercase: true,
       },
     ],
+    template: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,

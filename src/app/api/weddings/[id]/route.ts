@@ -1,7 +1,8 @@
 import { dbConnect } from '@/lib/mongodb';
 import { getWeddingById, updateWedding, deleteWedding } from '@/lib/db';
 import { apiResponse, apiError, AppError, validateId } from '@/lib/api';
-import { getSession } from '@/lib/auth';
+import { auth } from '@/auth';
+import { weddingUpdateSchema } from '@/lib/validation';
 import { NextRequest } from 'next/server';
 
 export async function GET(
@@ -31,8 +32,8 @@ export async function PATCH(
   try {
     await dbConnect();
 
-    const session = await getSession();
-    if (!session) {
+    const session = await auth();
+    if (!session?.user?.id) {
       throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
     }
 
@@ -44,12 +45,26 @@ export async function PATCH(
     }
 
     // Check if user is an organizer
-    if (!wedding.organizers.some((id: any) => id.toString() === session.id)) {
+    if (!wedding.organizers.some((id: any) => id.toString() === session.user!.id)) {
       throw new AppError('Not authorized to update this wedding', 403, 'FORBIDDEN');
     }
 
     const body = await request.json();
-    const updated = await updateWedding(params.id, body);
+    const validData = weddingUpdateSchema.parse(body);
+
+    // Handle date conversion if provided
+    const updateData = {
+      ...validData,
+      ...(validData.date && { date: new Date(validData.date) }),
+      ...(validData.events && {
+        events: validData.events.map((event: any) => ({
+          ...event,
+          date: event.date ? new Date(event.date) : undefined,
+        })),
+      }),
+    } as any;
+
+    const updated = await updateWedding(params.id, updateData);
 
     return apiResponse(updated);
   } catch (error) {
@@ -64,8 +79,8 @@ export async function DELETE(
   try {
     await dbConnect();
 
-    const session = await getSession();
-    if (!session) {
+    const session = await auth();
+    if (!session?.user?.id) {
       throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
     }
 
@@ -77,7 +92,7 @@ export async function DELETE(
     }
 
     // Check if user is an organizer
-    if (!wedding.organizers.some((id: any) => id.toString() === session.id)) {
+    if (!wedding.organizers.some((id: any) => id.toString() === session.user!.id)) {
       throw new AppError('Not authorized to delete this wedding', 403, 'FORBIDDEN');
     }
 

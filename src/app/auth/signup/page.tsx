@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
-
-export const dynamic = 'force-dynamic';
 
 export default function SignUpPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const role = (searchParams.get('role') || 'customer') as 'customer' | 'partner';
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -39,7 +40,7 @@ export default function SignUpPage() {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, role }),
       });
 
       const data = await response.json();
@@ -81,35 +82,37 @@ export default function SignUpPage() {
         </div>
 
         {/* Right Panel - Form */}
-        <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6 sm:p-12 md:p-24">
-          <div className="w-full max-w-md">
+        <div className="w-full lg:w-1/2 flex flex-col justify-center items-center px-4 py-6 lg:px-8 lg:py-0 min-h-screen lg:h-screen overflow-y-auto lg:overflow-hidden">
+          <div className="w-full max-w-md my-auto py-6 lg:py-0">
             {/* Brand */}
-            <Link href="/" className="text-3xl font-serif italic text-primary block mb-12 text-center lg:text-left">
+            <Link href="/" className="text-3xl font-serif italic text-primary block mb-6 lg:mb-8 text-center lg:text-left">
               ForeverStory
             </Link>
 
             {/* Header */}
-            <h1 className="heading-4 mb-2 text-on-surface text-center lg:text-left">Create Account</h1>
-            <p className="text-on-surface-variant mb-8 text-center lg:text-left">Begin your wedding story</p>
+            <h1 className="text-2xl lg:text-3xl font-serif text-on-surface mb-1 text-center lg:text-left">Create Account</h1>
+            <p className="text-xs lg:text-sm text-on-surface-variant mb-4 lg:mb-6 text-center lg:text-left">
+              {role === 'partner' ? 'Start earning commissions' : 'Begin your wedding story'}
+            </p>
 
             {/* Error Message */}
             {error && (
-              <div className="mb-6 p-4 bg-error/10 border border-error text-error rounded-lg text-sm">
+              <div className="mb-3 p-2.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs lg:text-sm">
                 {error}
               </div>
             )}
 
             {/* Success Message */}
             {success && (
-              <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+              <div className="mb-3 p-2.5 bg-green-50 border border-green-200 text-green-700 rounded-lg text-xs lg:text-sm">
                 {success}
               </div>
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-5">
               <div>
-                <label className="label-caps">Full Name</label>
+                <label className="label-caps text-xs">Full Name</label>
                 <input
                   type="text"
                   required
@@ -117,12 +120,12 @@ export default function SignUpPage() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="John Doe"
                   disabled={loading}
-                  className="form-input-minimal"
+                  className="form-input-minimal text-sm lg:text-base"
                 />
               </div>
 
               <div>
-                <label className="label-caps">Email Address</label>
+                <label className="label-caps text-xs">Email Address</label>
                 <input
                   type="email"
                   required
@@ -130,12 +133,12 @@ export default function SignUpPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   disabled={loading}
-                  className="form-input-minimal"
+                  className="form-input-minimal text-sm lg:text-base"
                 />
               </div>
 
               <div>
-                <label className="label-caps">Password</label>
+                <label className="label-caps text-xs">Password</label>
                 <input
                   type="password"
                   required
@@ -143,12 +146,12 @@ export default function SignUpPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   disabled={loading}
-                  className="form-input-minimal"
+                  className="form-input-minimal text-sm lg:text-base"
                 />
               </div>
 
               <div>
-                <label className="label-caps">Confirm Password</label>
+                <label className="label-caps text-xs">Confirm Password</label>
                 <input
                   type="password"
                   required
@@ -156,7 +159,7 @@ export default function SignUpPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
                   disabled={loading}
-                  className="form-input-minimal"
+                  className="form-input-minimal text-sm lg:text-base"
                 />
               </div>
 
@@ -165,26 +168,26 @@ export default function SignUpPage() {
                 variant="gold"
                 size="form"
                 disabled={loading}
-                className="w-full"
+                className="w-full mt-4 lg:mt-5 py-2.5 lg:py-3"
               >
                 {loading ? 'Creating account...' : 'Create Account'}
               </Button>
             </form>
 
             {/* Divider */}
-            <div className="my-8 flex items-center gap-4">
+            <div className="my-4 lg:my-5 flex items-center gap-3">
               <div className="flex-1 h-px bg-outline-variant/30" />
-              <span className="text-sm text-on-surface-variant font-label-caps tracking-widest uppercase">or</span>
+              <span className="text-xs text-on-surface-variant font-label-caps tracking-widest uppercase">or</span>
               <div className="flex-1 h-px bg-outline-variant/30" />
             </div>
 
             {/* Google OAuth */}
             <button
               type="button"
-              onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
-              className="w-full border border-outline-variant bg-white text-on-surface py-4 rounded-xl uppercase tracking-widest font-semibold text-xs hover:bg-surface-container-low transition-colors flex items-center justify-center gap-3"
+              onClick={() => signIn('google', { callbackUrl: '/weddings/new' })}
+              className="w-full border border-outline-variant bg-white text-on-surface py-2.5 rounded-lg uppercase tracking-widest font-semibold text-xs hover:bg-surface-container-low transition-colors flex items-center justify-center gap-2"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
@@ -194,26 +197,12 @@ export default function SignUpPage() {
             </button>
 
             {/* Footer */}
-            <p className="mt-8 text-center text-on-surface-variant text-sm">
+            <p className="mt-3 lg:mt-4 text-center text-on-surface-variant text-xs lg:text-sm">
               Already have an account?{' '}
               <Link href="/auth/signin" className="text-primary hover:underline font-medium">
                 Sign in
               </Link>
             </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Page-level footer bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-surface border-t border-stone-100 py-8">
-        <div className="section-max px-6 md:px-12 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs font-serif uppercase tracking-widest text-on-surface-variant">
-            © 2024 ForeverStory
-          </p>
-          <div className="flex gap-8 text-xs font-serif uppercase tracking-widest text-on-surface-variant">
-            <a href="#" className="hover:text-on-surface transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-on-surface transition-colors">Terms</a>
-            <a href="#" className="hover:text-on-surface transition-colors">Contact</a>
           </div>
         </div>
       </div>

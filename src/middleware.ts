@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 
-const protectedRoutes = ['/dashboard'];
-const publicRoutes = ['/auth/signin', '/auth/signup', '/auth/error'];
+const protectedRoutes: string[] = [];
+const publicRoutes = ['/auth/signin', '/auth/signup', '/auth/error', '/auth/forgot-password', '/auth/signup-choice'];
 
 /**
  * Handle route protection
@@ -21,10 +21,8 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL(`/auth/signin?callbackUrl=${nextUrl.pathname}`, nextUrl));
   }
 
-  // Redirect to dashboard if accessing auth pages while logged in
-  if (isPublicRoute && isLoggedIn) {
-    return NextResponse.redirect(new URL('/dashboard', nextUrl));
-  }
+  // Allow access to auth pages even when logged in (don't redirect away)
+  // Users should be able to visit signin/signup pages anytime
 
   return NextResponse.next();
 }

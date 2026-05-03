@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 import bcryptjs from 'bcryptjs';
 
 export interface IUser extends Document {
@@ -8,8 +8,11 @@ export interface IUser extends Document {
   phone?: string;
   avatar?: string;
   bio?: string;
+  role: 'customer' | 'partner' | 'admin';
   isProfilePublic: boolean;
   allowViewWeddingStories: boolean;
+  referredBy?: Types.ObjectId;
+  totalEarnings: number;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(password: string): Promise<boolean>;
@@ -49,6 +52,11 @@ const userSchema = new Schema<IUser>(
       type: String,
       maxlength: [500, 'Bio cannot be more than 500 characters'],
     },
+    role: {
+      type: String,
+      enum: ['customer', 'partner', 'admin'],
+      default: 'customer',
+    },
     isProfilePublic: {
       type: Boolean,
       default: true,
@@ -56,6 +64,14 @@ const userSchema = new Schema<IUser>(
     allowViewWeddingStories: {
       type: Boolean,
       default: true,
+    },
+    referredBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    totalEarnings: {
+      type: Number,
+      default: 0,
     },
   },
   {

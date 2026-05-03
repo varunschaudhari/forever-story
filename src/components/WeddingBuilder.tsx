@@ -1,15 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Event, Contact } from '@/lib/validation';
+import Link from 'next/link';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Badge } from '@/components/ui/Badge';
+import type { IWedding } from '@/models/Wedding';
+
+interface WeddingBuilderProps {
+  weddingId?: string;
+  initialData?: Partial<IWedding>;
+}
 
 interface WeddingFormData {
-  slug: string;
   groomName: string;
   brideName: string;
   title: string;
   description: string;
+  slug: string;
+  coverImage: string;
   date: string;
   venue: {
     name: string;
@@ -19,824 +29,782 @@ interface WeddingFormData {
     zipCode: string;
     country: string;
   };
-  guestCount: number;
-  events: Event[];
-  contacts: Contact[];
+  events: Array<{
+    name: string;
+    type: string;
+    date: string;
+    time: string;
+    location: string;
+    description: string;
+  }>;
+  contacts: Array<{
+    name: string;
+    phone: string;
+    email: string;
+    relationship: string;
+  }>;
   gallery: string[];
-  coverImage?: string;
+  guestCount: number;
+  template: string;
   isPublic: boolean;
 }
 
-const initialFormData: WeddingFormData = {
-  slug: '',
-  groomName: '',
-  brideName: '',
-  title: '',
-  description: '',
-  date: '',
-  venue: {
-    name: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: '',
-  },
-  guestCount: 0,
-  events: [],
-  contacts: [],
-  gallery: [],
-  coverImage: undefined,
-  isPublic: false,
+const SECTIONS = [
+  { id: 'couple', label: 'Couple', icon: '♡' },
+  { id: 'story', label: 'Story', icon: '✦' },
+  { id: 'events', label: 'Events', icon: '📅' },
+  { id: 'contacts', label: 'Contacts', icon: '📋' },
+  { id: 'gallery', label: 'Gallery', icon: '📷' },
+  { id: 'templates', label: 'Templates', icon: '◈' },
+];
+
+const TEMPLATES = [
+  { id: 'classic', label: 'The Classic', image: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=300&h=400&fit=crop', tags: 'formal · timeless · ornate' },
+  { id: 'modern', label: 'Modern Minimal', image: 'https://images.unsplash.com/photo-1469924935806-f2f038369e73?w=300&h=400&fit=crop', tags: 'clean · contemporary · bold' },
+];
+
+const normalizeFormData = (data?: Partial<IWedding>): WeddingFormData => {
+  if (!data) {
+    return {
+      groomName: '',
+      brideName: '',
+      title: '',
+      description: '',
+      slug: '',
+      coverImage: '',
+      date: new Date().toISOString().slice(0, 10),
+      venue: {
+        name: '',
+        address: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        country: '',
+      },
+      events: [],
+      contacts: [],
+      gallery: [],
+      guestCount: 0,
+      template: 'classic',
+      isPublic: false,
+    };
+  }
+
+  const dateStr = data.date instanceof Date ? data.date.toISOString().slice(0, 10) : typeof data.date === 'string' ? (data.date as string).slice(0, 10) : new Date().toISOString().slice(0, 10);
+
+  return {
+    groomName: data.groomName || '',
+    brideName: data.brideName || '',
+    title: data.title || '',
+    description: data.description || '',
+    slug: data.slug || '',
+    coverImage: data.coverImage || '',
+    date: dateStr,
+    venue: {
+      name: data.venue?.name || '',
+      address: data.venue?.address || '',
+      city: data.venue?.city || '',
+      state: data.venue?.state || '',
+      zipCode: data.venue?.zipCode || '',
+      country: data.venue?.country || '',
+    },
+    events: (data.events || []).map((e: any) => ({
+      name: e.name || '',
+      type: e.type || 'reception',
+      date: e.date instanceof Date ? e.date.toISOString().slice(0, 10) : typeof e.date === 'string' ? e.date.slice(0, 10) : dateStr,
+      time: e.time || '18:00',
+      location: e.location || '',
+      description: e.description || '',
+    })),
+    contacts: (data.contacts || []).map((c: any) => ({
+      name: c.name || '',
+      phone: c.phone || '',
+      email: c.email || '',
+      relationship: c.relationship || '',
+    })),
+    gallery: data.gallery || [],
+    guestCount: data.guestCount || 0,
+    template: data.template || 'classic',
+    isPublic: data.isPublic || false,
+  };
 };
 
-export default function WeddingBuilder() {
+export default function WeddingBuilder({ weddingId, initialData }: WeddingBuilderProps) {
   const router = useRouter();
-  const [formData, setFormData] = useState<WeddingFormData>(initialFormData);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [activeTab, setActiveTab] = useState<'basic' | 'venue' | 'events' | 'contacts' | 'gallery'>('basic');
-  const [uploadingImages, setUploadingImages] = useState(false);
+  const [formData, setFormData] = useState<WeddingFormData>(normalizeFormData(initialData));
 
-  const handleBasicChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
+  const [activeSection, setActiveSection] = useState('couple');
+  const [saving, setSaving] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [weddingTime, setWeddingTime] = useState('18:00');
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      { threshold: 0.3 }
+    );
+
+    SECTIONS.forEach((section) => {
+      const element = sectionRefs.current[section.id];
+      if (element) observer.observe(element);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const uploadFiles = useCallback(async (files: FileList): Promise<string[]> => {
+    const formDataObj = new FormData();
+    Array.from(files).forEach((file) => formDataObj.append('files', file));
+
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      body: formDataObj,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      const errorMsg = data.error || `Upload failed with status ${res.status}`;
+      throw new Error(errorMsg);
+    }
+
+    return data.urls || [];
+  }, []);
+
+  const scrollToSection = useCallback((sectionId: string) => {
+    const element = sectionRefs.current[sectionId];
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+      setActiveSection(sectionId);
+    }
+  }, []);
+
+  const updateField = useCallback(
+    (field: string, value: any) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
+
+  const updateVenue = useCallback(
+    (field: string, value: string) => {
+      setFormData((prev) => ({
+        ...prev,
+        venue: { ...prev.venue, [field]: value },
+      }));
+    },
+    []
+  );
+
+  const updateEvent = useCallback(
+    (index: number, field: string, value: any) => {
+      setFormData((prev) => ({
+        ...prev,
+        events: prev.events.map((e, i) =>
+          i === index ? { ...e, [field]: value } : e
+        ),
+      }));
+    },
+    []
+  );
+
+  const addEvent = useCallback(() => {
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+      events: [
+        ...prev.events,
+        { name: '', type: 'reception', date: formData.date, time: '18:00', location: '', description: '' },
+      ],
     }));
-  };
+  }, [formData.date]);
 
-  const handleVenueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      venue: { ...prev.venue, [name]: value },
-    }));
-  };
-
-  const addEvent = () => {
-    setFormData((prev) => ({
-      ...prev,
-      events: [...prev.events, { name: '', type: 'ceremony', date: '', time: '' }],
-    }));
-  };
-
-  const updateEvent = (index: number, field: keyof Event, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      events: prev.events.map((event, i) =>
-        i === index ? { ...event, [field]: value } : event
-      ),
-    }));
-  };
-
-  const removeEvent = (index: number) => {
+  const removeEvent = useCallback((index: number) => {
     setFormData((prev) => ({
       ...prev,
       events: prev.events.filter((_, i) => i !== index),
     }));
-  };
+  }, []);
 
-  const addContact = () => {
+  const updateContact = useCallback(
+    (index: number, field: string, value: string) => {
+      setFormData((prev) => ({
+        ...prev,
+        contacts: prev.contacts.map((c, i) =>
+          i === index ? { ...c, [field]: value } : c
+        ),
+      }));
+    },
+    []
+  );
+
+  const addContact = useCallback(() => {
     setFormData((prev) => ({
       ...prev,
-      contacts: [...prev.contacts, { name: '', email: '', phone: '' }],
+      contacts: [...prev.contacts, { name: '', phone: '', email: '', relationship: '' }],
     }));
-  };
+  }, []);
 
-  const updateContact = (index: number, field: keyof Contact, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      contacts: prev.contacts.map((contact, i) =>
-        i === index ? { ...contact, [field]: value } : contact
-      ),
-    }));
-  };
-
-  const removeContact = (index: number) => {
+  const removeContact = useCallback((index: number) => {
     setFormData((prev) => ({
       ...prev,
       contacts: prev.contacts.filter((_, i) => i !== index),
     }));
-  };
+  }, []);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setUploadingImages(true);
-    setError('');
-
-    try {
-      const formData = new FormData();
-      for (let i = 0; i < files.length; i++) {
-        formData.append('files', files[i]);
-      }
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to upload images');
-      }
-
-      setFormData((prev) => ({
-        ...prev,
-        gallery: [...prev.gallery, ...data.urls],
-      }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload images');
-    } finally {
-      setUploadingImages(false);
-    }
-  };
-
-  const removeGalleryImage = (index: number) => {
+  const removeGalleryImage = useCallback((index: number) => {
     setFormData((prev) => ({
       ...prev,
       gallery: prev.gallery.filter((_, i) => i !== index),
     }));
-  };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccess('');
+  const handleSave = useCallback(
+    async (publish = false) => {
+      try {
+        setSaving(true);
+        setError(null);
 
-    try {
-      // Validate required venue fields
-      const { name, address, city, state, zipCode, country } = formData.venue;
-      if (!name || !address || !city || !state || !zipCode || !country) {
-        setError('Please fill in all required venue fields');
-        setLoading(false);
-        setActiveTab('venue');
-        return;
+        const payload = {
+          ...formData,
+          isPublic: publish,
+        };
+
+        if (weddingId) {
+          const res = await fetch(`/api/weddings/${weddingId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.message || 'Failed to save wedding');
+          }
+        } else {
+          const slug = formData.slug || `${formData.groomName}-${formData.brideName}`
+            .toLowerCase()
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9-]/g, '');
+
+          const res = await fetch('/api/weddings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...payload,
+              slug,
+            }),
+          });
+
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.message || 'Failed to create wedding');
+          }
+
+          const data = await res.json();
+          router.push(`/weddings/${data.data._id}/edit`);
+          return;
+        }
+
+        setSaving(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+        setSaving(false);
       }
+    },
+    [formData, weddingId, router]
+  );
 
-      // Convert datetime-local to ISO 8601 format
-      const dateObj = new Date(formData.date);
-      const isoDate = dateObj.toISOString();
-
-      // Format events - only include if they have required fields
-      const formattedEvents = formData.events
-        .filter((event) => event.name && event.date && event.time)
-        .map((event) => ({
-          ...event,
-          date: new Date(`${event.date}T${event.time}`).toISOString(),
-          time: event.time, // Keep HH:mm format for the time field
-        }));
-
-      const response = await fetch('/api/weddings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slug: formData.slug,
-          groomName: formData.groomName,
-          brideName: formData.brideName,
-          title: formData.title,
-          description: formData.description || undefined,
-          date: isoDate,
-          venue: formData.venue,
-          coverImage: formData.coverImage || undefined,
-          events: formattedEvents.length > 0 ? formattedEvents : undefined,
-          contacts: formData.contacts.filter(c => c.name).length > 0 ? formData.contacts.filter(c => c.name) : undefined,
-          gallery: formData.gallery.length > 0 ? formData.gallery : undefined,
-          guestCount: parseInt(formData.guestCount.toString()),
-          isPublic: formData.isPublic,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || data.message || 'Failed to create wedding');
-      }
-
-      setSuccess('Wedding created successfully!');
-      setTimeout(() => {
-        router.push(`/dashboard/weddings/${data.data._id}`);
-      }, 1500);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
+  const completedFields = Object.values(formData).filter((v) => {
+    if (typeof v === 'string') return v.trim().length > 0;
+    if (typeof v === 'object' && v !== null) {
+      if (Array.isArray(v)) return v.length > 0;
+      return Object.values(v).some((val) => typeof val === 'string' && val.trim());
     }
-  };
+    return false;
+  }).length;
+  const totalFields = Object.keys(formData).length;
+  const progress = Math.round((completedFields / totalFields) * 100);
 
   return (
-    <div className="min-h-screen bg-surface py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="card-base">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-primary to-primary/80 px-6 py-12 sm:px-8">
-            <h1 className="text-3xl font-serif font-bold text-white">Create Your Wedding</h1>
-            <p className="text-primary-container/90 mt-2 font-light">Build your perfect wedding page with all the details</p>
+    <div className="fixed inset-0 z-50 bg-surface flex flex-col overflow-hidden">
+      <header className="h-16 border-b border-outline-variant flex items-center justify-between px-6 bg-white">
+        <div className="text-2xl font-serif italic text-on-surface">ForeverStory</div>
+        <div className="flex items-center gap-8">
+          <nav className="hidden md:flex gap-6">
+            <span className="text-sm uppercase tracking-widest text-on-surface font-semibold cursor-pointer">
+              Builder
+            </span>
+            {formData.groomName && formData.brideName && (
+              <Link
+                href={`/weddings/${formData.slug || `${formData.groomName}-${formData.brideName}`.toLowerCase().replace(/\s+/g, '-')}`}
+                target="_blank"
+                className="text-sm uppercase tracking-widest text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+              >
+                Preview
+              </Link>
+            )}
+            <span className="text-sm uppercase tracking-widest text-on-surface-variant cursor-pointer">
+              Account
+            </span>
+          </nav>
+        </div>
+        <div className="flex gap-4">
+          <Button variant="outline" size="md" onClick={() => handleSave(false)} disabled={saving}>
+            {saving ? 'Saving...' : 'Save Draft'}
+          </Button>
+          <Button variant="gold" size="md" onClick={() => handleSave(true)} disabled={saving}>
+            {saving ? 'Publishing...' : 'Publish'}
+          </Button>
+        </div>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        <aside className="w-64 bg-stone-50 border-r border-stone-200 overflow-y-auto flex flex-col p-6">
+          <div className="mb-8">
+            <h3 className="heading-5 text-on-surface mb-2">The Heirloom</h3>
+            <div className="w-full bg-stone-200 rounded-full h-2 mb-2">
+              <div
+                className="bg-secondary h-2 rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="text-xs text-on-surface-variant">{progress}% Complete</p>
           </div>
 
-          {/* Tabs */}
-          <div className="border-b border-outline-variant">
-            <div className="flex flex-wrap sm:flex-nowrap">
-              {(['basic', 'venue', 'events', 'contacts', 'gallery'] as const).map((tab) => (
+          <nav className="space-y-2 flex-1">
+            {SECTIONS.map((section) => (
+              <button
+                key={section.id}
+                onClick={() => scrollToSection(section.id)}
+                className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 ${
+                  activeSection === section.id
+                    ? 'bg-primary-container border-l-2 border-secondary text-on-surface font-semibold'
+                    : 'text-on-surface-variant hover:bg-stone-100'
+                }`}
+              >
+                <span className="text-lg">{section.icon}</span>
+                <span className="text-sm uppercase tracking-widest">{section.label}</span>
+              </button>
+            ))}
+          </nav>
+
+          <Button variant="ghost" size="md" className="w-full justify-center text-sm uppercase tracking-widest">
+            Preview Site
+          </Button>
+        </aside>
+
+        <main className="flex-1 overflow-y-auto px-12 py-16 max-w-5xl mx-auto w-full">
+          <h1 className="heading-3 italic text-center mb-20 text-primary">Crafting Your Legacy</h1>
+
+          {error && (
+            <div className="mb-8 p-4 bg-error-container border border-error rounded-lg">
+              <p className="text-sm text-error">{error}</p>
+            </div>
+          )}
+
+          <section
+            id="couple"
+            ref={(el) => {
+              if (el) sectionRefs.current['couple'] = el;
+            }}
+            className="mb-20"
+          >
+            <h2 className="heading-5 mb-8 flex items-center gap-3">
+              <span>♡</span> The Couple
+            </h2>
+            <div className="grid md:grid-cols-2 gap-8 mb-8">
+              <Input
+                label="Groom's Name"
+                value={formData.groomName}
+                onChange={(e) => updateField('groomName', e.target.value)}
+                placeholder="e.g. Julian Montgomery"
+              />
+              <Input
+                label="Bride's Name"
+                value={formData.brideName}
+                onChange={(e) => updateField('brideName', e.target.value)}
+                placeholder="e.g. Elena Vane"
+              />
+            </div>
+
+            <div className="card-base p-8">
+              {formData.coverImage ? (
+                <div className="relative">
+                  <img
+                    src={formData.coverImage}
+                    alt="Cover"
+                    className="w-full aspect-[4/5] object-cover rounded-lg"
+                  />
+                  <button
+                    onClick={() => updateField('coverImage', '')}
+                    className="absolute top-2 right-2 bg-error text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-error/90"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <label className="block border-2 border-dashed border-outline-variant rounded-lg p-8 text-center cursor-pointer hover:bg-stone-50 transition-colors">
+                  <div className="text-4xl mb-2">📷</div>
+                  <p className="font-semibold text-on-surface mb-1">Upload Couple Photo</p>
+                  <p className="text-xs text-on-surface-variant">RECOMMENDED: HIGH RESOLUTION EDITORIAL PORTRAIT</p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      if (e.target.files?.length) {
+                        try {
+                          setUploadingCover(true);
+                          const urls = await uploadFiles(e.target.files);
+                          updateField('coverImage', urls[0]);
+                        } catch (err) {
+                          setError('Failed to upload photo');
+                        } finally {
+                          setUploadingCover(false);
+                        }
+                      }
+                    }}
+                    disabled={uploadingCover}
+                  />
+                </label>
+              )}
+            </div>
+          </section>
+
+          <section
+            id="story"
+            ref={(el) => {
+              if (el) sectionRefs.current['story'] = el;
+            }}
+            className="mb-20"
+          >
+            <h2 className="heading-5 mb-8 flex items-center gap-3">
+              <span>✦</span> Our Story
+            </h2>
+            <div className="max-w-2xl mx-auto">
+              <textarea
+                value={formData.description}
+                onChange={(e) => updateField('description', e.target.value)}
+                placeholder="Tell us your love story... How did you meet? What makes your relationship special?"
+                className="w-full h-32 p-4 border border-outline-variant rounded-lg focus:border-primary focus:outline-none resize-none italic text-on-surface placeholder-on-surface-variant"
+              />
+            </div>
+          </section>
+
+          <section
+            id="events"
+            ref={(el) => {
+              if (el) sectionRefs.current['events'] = el;
+            }}
+            className="mb-20"
+          >
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="heading-5 flex items-center gap-3">
+                <span>📅</span> The Celebration
+              </h2>
+              <button
+                onClick={addEvent}
+                className="text-sm text-secondary font-semibold uppercase tracking-widest hover:text-secondary/80"
+              >
+                + Add Event
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="card-base p-8">
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="font-semibold text-on-surface">The Wedding</h3>
+                  <Badge>main</Badge>
+                </div>
+                <div className="space-y-4">
+                  <Input
+                    label="Wedding Title"
+                    value={formData.title}
+                    onChange={(e) => updateField('title', e.target.value)}
+                    placeholder="e.g. The Wedding of Elena & Julian"
+                  />
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Input
+                      label="Date"
+                      type="date"
+                      value={formData.date}
+                      onChange={(e) => updateField('date', e.target.value)}
+                    />
+                    <Input
+                      label="Time"
+                      type="time"
+                      value={weddingTime}
+                      onChange={(e) => setWeddingTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {formData.events.map((event, index) => (
+                <div key={index} className="card-base p-8 relative">
+                  <button
+                    onClick={() => removeEvent(index)}
+                    className="absolute top-4 right-4 text-on-surface-variant hover:text-error"
+                  >
+                    ×
+                  </button>
+                  <div className="space-y-4">
+                    <Input
+                      label="Event Name"
+                      value={event.name}
+                      onChange={(e) => updateEvent(index, 'name', e.target.value)}
+                      placeholder="e.g. Rehearsal Dinner"
+                    />
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <Input
+                        label="Date"
+                        type="date"
+                        value={event.date}
+                        onChange={(e) => updateEvent(index, 'date', e.target.value)}
+                      />
+                      <Input
+                        label="Time"
+                        type="time"
+                        value={event.time}
+                        onChange={(e) => updateEvent(index, 'time', e.target.value)}
+                      />
+                    </div>
+                    <Input
+                      label="Location"
+                      value={event.location}
+                      onChange={(e) => updateEvent(index, 'location', e.target.value)}
+                      placeholder="e.g. Venue Name, City"
+                    />
+                    <textarea
+                      value={event.description}
+                      onChange={(e) => updateEvent(index, 'description', e.target.value)}
+                      placeholder="Event details..."
+                      className="w-full h-20 p-4 border border-outline-variant rounded-lg focus:border-primary focus:outline-none resize-none text-on-surface placeholder-on-surface-variant"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 card-base p-8">
+              <h3 className="font-semibold text-on-surface mb-6">Venue Details</h3>
+              <div className="grid md:grid-cols-2 gap-6">
+                <Input
+                  label="Venue Name"
+                  value={formData.venue.name}
+                  onChange={(e) => updateVenue('name', e.target.value)}
+                  placeholder="e.g. Grand Ballroom"
+                />
+                <Input
+                  label="Address"
+                  value={formData.venue.address}
+                  onChange={(e) => updateVenue('address', e.target.value)}
+                  placeholder="Street address"
+                />
+                <Input
+                  label="City"
+                  value={formData.venue.city}
+                  onChange={(e) => updateVenue('city', e.target.value)}
+                  placeholder="City"
+                />
+                <Input
+                  label="State"
+                  value={formData.venue.state}
+                  onChange={(e) => updateVenue('state', e.target.value)}
+                  placeholder="State"
+                />
+                <Input
+                  label="Zip Code"
+                  value={formData.venue.zipCode}
+                  onChange={(e) => updateVenue('zipCode', e.target.value)}
+                  placeholder="Zip code"
+                />
+                <Input
+                  label="Country"
+                  value={formData.venue.country}
+                  onChange={(e) => updateVenue('country', e.target.value)}
+                  placeholder="Country"
+                />
+              </div>
+            </div>
+          </section>
+
+          <section
+            id="contacts"
+            ref={(el) => {
+              if (el) sectionRefs.current['contacts'] = el;
+            }}
+            className="mb-20"
+          >
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="heading-5 flex items-center gap-3">
+                <span>📋</span> RSVP & Contacts
+              </h2>
+              <button
+                onClick={addContact}
+                className="text-sm text-secondary font-semibold uppercase tracking-widest hover:text-secondary/80"
+              >
+                + Add Contact
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {formData.contacts.map((contact, index) => (
+                <div key={index} className="card-base p-8 relative">
+                  <button
+                    onClick={() => removeContact(index)}
+                    className="absolute top-4 right-4 text-on-surface-variant hover:text-error"
+                  >
+                    ×
+                  </button>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <Input
+                      label="Name"
+                      value={contact.name}
+                      onChange={(e) => updateContact(index, 'name', e.target.value)}
+                      placeholder="Contact name"
+                    />
+                    <Input
+                      label="Relationship"
+                      value={contact.relationship}
+                      onChange={(e) => updateContact(index, 'relationship', e.target.value)}
+                      placeholder="e.g. Bridesmaid, Groomsman"
+                    />
+                    <Input
+                      label="Phone"
+                      type="tel"
+                      value={contact.phone}
+                      onChange={(e) => updateContact(index, 'phone', e.target.value)}
+                      placeholder="Phone number"
+                    />
+                    <Input
+                      label="Email"
+                      type="email"
+                      value={contact.email}
+                      onChange={(e) => updateContact(index, 'email', e.target.value)}
+                      placeholder="Email address"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 card-base p-8">
+              <h3 className="font-semibold text-on-surface mb-4">Guest Count</h3>
+              <Input
+                label="Total Guests"
+                type="number"
+                value={formData.guestCount.toString()}
+                onChange={(e) => updateField('guestCount', parseInt(e.target.value) || 0)}
+                placeholder="0"
+              />
+            </div>
+          </section>
+
+          <section
+            id="gallery"
+            ref={(el) => {
+              if (el) sectionRefs.current['gallery'] = el;
+            }}
+            className="mb-20"
+          >
+            <h2 className="heading-5 mb-8 flex items-center gap-3">
+              <span>📷</span> Moments Captured
+            </h2>
+            <p className="text-on-surface-variant mb-8 text-sm">Share your favorite moments. Upload high-quality photos to showcase your wedding.</p>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <label className="aspect-square border-2 border-dashed border-outline-variant rounded-lg flex items-center justify-center cursor-pointer hover:bg-stone-50 transition-colors">
+                <div className="text-center">
+                  <div className="text-3xl mb-2">+</div>
+                  <p className="text-xs text-on-surface-variant">Upload</p>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={async (e) => {
+                    if (e.target.files?.length) {
+                      try {
+                        setUploadingGallery(true);
+                        const urls = await uploadFiles(e.target.files);
+                        updateField('gallery', [...formData.gallery, ...urls]);
+                      } catch (err) {
+                        setError('Failed to upload photos');
+                      } finally {
+                        setUploadingGallery(false);
+                      }
+                    }
+                  }}
+                  disabled={uploadingGallery}
+                />
+              </label>
+
+              {formData.gallery.map((imageUrl, index) => (
+                <div key={index} className="aspect-square relative group">
+                  <img
+                    src={imageUrl}
+                    alt={`Gallery ${index + 1}`}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                  <button
+                    onClick={() => removeGalleryImage(index)}
+                    className="absolute inset-0 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                  >
+                    <span className="text-white text-2xl">×</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section
+            id="templates"
+            ref={(el) => {
+              if (el) sectionRefs.current['templates'] = el;
+            }}
+            className="mb-20"
+          >
+            <h2 className="heading-5 italic text-center mb-12">Choose Your Aesthetic</h2>
+
+            <div className="grid md:grid-cols-2 gap-12 max-w-3xl mx-auto">
+              {TEMPLATES.map((tmpl) => (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex-1 px-4 py-3 text-sm font-medium text-center transition font-label-caps ${
-                    activeTab === tab
-                      ? 'border-b-2 border-primary text-primary'
-                      : 'text-on-surface-variant hover:text-on-surface'
+                  key={tmpl.id}
+                  onClick={() => updateField('template', tmpl.id)}
+                  className={`relative overflow-hidden rounded-xl transition-all ${
+                    formData.template === tmpl.id ? 'ring-2 ring-secondary' : 'hover:shadow-lg'
                   }`}
                 >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  <img
+                    src={tmpl.image}
+                    alt={tmpl.label}
+                    className="w-full aspect-[3/4] object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-3">
+                    <h3 className="text-white font-serif text-xl">{tmpl.label}</h3>
+                    <p className="text-white/80 text-xs">{tmpl.tags}</p>
+                    {formData.template === tmpl.id && (
+                      <Badge className="bg-secondary text-white">Selected</Badge>
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
-          </div>
+          </section>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 sm:p-8">
-            {error && (
-              <div className="mb-6 p-4 bg-error/10 border border-error text-error rounded-lg text-sm">{error}</div>
-            )}
-            {success && (
-              <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">{success}</div>
-            )}
-
-            {/* Basic Information Tab */}
-            {activeTab === 'basic' && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div>
-                    <label className="label-caps">
-                      Groom Name *
-                    </label>
-                    <input
-                      type="text"
-                      name="groomName"
-                      value={formData.groomName}
-                      onChange={handleBasicChange}
-                      className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                      placeholder="Enter groom's name"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="label-caps">
-                      Bride Name *
-                    </label>
-                    <input
-                      type="text"
-                      name="brideName"
-                      value={formData.brideName}
-                      onChange={handleBasicChange}
-                      className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                      placeholder="Enter bride's name"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="label-caps">
-                    Wedding Slug * <span className="text-on-surface-variant text-xs">(unique URL identifier)</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="slug"
-                    value={formData.slug}
-                    onChange={handleBasicChange}
-                    className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                    placeholder="john-sarah-2024"
-                    pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
-                    required
-                  />
-                  <p className="text-xs text-on-surface-variant mt-1">Letters, numbers, and hyphens only</p>
-                </div>
-
-                <div>
-                  <label className="label-caps">
-                    Wedding Title *
-                  </label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleBasicChange}
-                    className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                    placeholder="e.g., John & Sarah's Wedding"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="label-caps">
-                    Description
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleBasicChange}
-                    rows={4}
-                    className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                    placeholder="Tell your love story..."
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div>
-                    <label className="label-caps">
-                      Wedding Date *
-                    </label>
-                    <input
-                      type="datetime-local"
-                      name="date"
-                      value={formData.date}
-                      onChange={handleBasicChange}
-                      className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="label-caps">
-                      Expected Guest Count
-                    </label>
-                    <input
-                      type="number"
-                      name="guestCount"
-                      value={formData.guestCount}
-                      onChange={handleBasicChange}
-                      className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                      min="0"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      name="isPublic"
-                      checked={formData.isPublic}
-                      onChange={handleBasicChange}
-                      className="w-4 h-4 border-gray-300 rounded"
-                    />
-                    <span className="text-sm font-medium text-on-surface">Make wedding public</span>
-                  </label>
-                </div>
-              </div>
-            )}
-
-            {/* Venue Tab */}
-            {activeTab === 'venue' && (
-              <div className="space-y-6">
-                <div>
-                  <label className="label-caps">
-                    Venue Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.venue.name}
-                    onChange={handleVenueChange}
-                    className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                    placeholder="Enter venue name"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="label-caps">
-                    Address *
-                  </label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={formData.venue.address}
-                    onChange={handleVenueChange}
-                    className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                    placeholder="Street address"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div>
-                    <label className="label-caps">
-                      City *
-                    </label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={formData.venue.city}
-                      onChange={handleVenueChange}
-                      className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                      placeholder="City"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="label-caps">
-                      State/Province *
-                    </label>
-                    <input
-                      type="text"
-                      name="state"
-                      value={formData.venue.state}
-                      onChange={handleVenueChange}
-                      className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                      placeholder="State/Province"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div>
-                    <label className="label-caps">
-                      Zip Code *
-                    </label>
-                    <input
-                      type="text"
-                      name="zipCode"
-                      value={formData.venue.zipCode}
-                      onChange={handleVenueChange}
-                      className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                      placeholder="Zip code"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="label-caps">
-                      Country *
-                    </label>
-                    <input
-                      type="text"
-                      name="country"
-                      value={formData.venue.country}
-                      onChange={handleVenueChange}
-                      className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                      placeholder="Country"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Events Tab */}
-            {activeTab === 'events' && (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-on-surface">Wedding Events</h3>
-                  <button
-                    type="button"
-                    onClick={addEvent}
-                    className="px-4 py-2 bg-primary text-white rounded-lg font-semibold text-xs hover:opacity-90 transition-opacity"
-                  >
-                    + Add Event
-                  </button>
-                </div>
-
-                {formData.events.length === 0 ? (
-                  <p className="text-center py-8 text-on-surface-variant">No events added yet</p>
-                ) : (
-                  <div className="space-y-4">
-                    {formData.events.map((event, index) => (
-                      <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <label className="label-caps">
-                              Event Name
-                            </label>
-                            <input
-                              type="text"
-                              value={event.name}
-                              onChange={(e) => updateEvent(index, 'name', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                              placeholder="e.g., Ceremony"
-                            />
-                          </div>
-                          <div>
-                            <label className="label-caps">
-                              Event Type
-                            </label>
-                            <select
-                              value={event.type}
-                              onChange={(e) => updateEvent(index, 'type', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                            >
-                              <option>ceremony</option>
-                              <option>reception</option>
-                              <option>dinner</option>
-                              <option>party</option>
-                              <option>custom</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <label className="label-caps">
-                              Date
-                            </label>
-                            <input
-                              type="date"
-                              value={event.date}
-                              onChange={(e) => updateEvent(index, 'date', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                            />
-                          </div>
-                          <div>
-                            <label className="label-caps">
-                              Time (HH:mm)
-                            </label>
-                            <input
-                              type="time"
-                              value={event.time}
-                              onChange={(e) => updateEvent(index, 'time', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                            />
-                          </div>
-                        </div>
-                        <div className="mb-4">
-                          <label className="label-caps">
-                            Location
-                          </label>
-                          <input
-                            type="text"
-                            value={event.location || ''}
-                            onChange={(e) => updateEvent(index, 'location', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                            placeholder="Event location"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeEvent(index)}
-                          className="text-sm text-red-600 hover:text-red-700 font-medium"
-                        >
-                          Remove Event
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Contacts Tab */}
-            {activeTab === 'contacts' && (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-on-surface">Contacts</h3>
-                  <button
-                    type="button"
-                    onClick={addContact}
-                    className="px-4 py-2 bg-primary text-white rounded-lg font-semibold text-xs hover:opacity-90 transition-opacity"
-                  >
-                    + Add Contact
-                  </button>
-                </div>
-
-                {formData.contacts.length === 0 ? (
-                  <p className="text-center py-8 text-on-surface-variant">No contacts added yet</p>
-                ) : (
-                  <div className="space-y-4">
-                    {formData.contacts.map((contact, index) => (
-                      <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <label className="label-caps">
-                              Name
-                            </label>
-                            <input
-                              type="text"
-                              value={contact.name}
-                              onChange={(e) => updateContact(index, 'name', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                              placeholder="Contact name"
-                            />
-                          </div>
-                          <div>
-                            <label className="label-caps">
-                              Relationship
-                            </label>
-                            <select
-                              value={contact.relationship || ''}
-                              onChange={(e) => updateContact(index, 'relationship', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                            >
-                              <option value="">Select...</option>
-                              <option>groom</option>
-                              <option>bride</option>
-                              <option>family</option>
-                              <option>friend</option>
-                              <option>vendor</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <label className="label-caps">
-                              Email
-                            </label>
-                            <input
-                              type="email"
-                              value={contact.email || ''}
-                              onChange={(e) => updateContact(index, 'email', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                              placeholder="email@example.com"
-                            />
-                          </div>
-                          <div>
-                            <label className="label-caps">
-                              Phone
-                            </label>
-                            <input
-                              type="tel"
-                              value={contact.phone || ''}
-                              onChange={(e) => updateContact(index, 'phone', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                              placeholder="+1-555-0000"
-                            />
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeContact(index)}
-                          className="text-sm text-red-600 hover:text-red-700 font-medium"
-                        >
-                          Remove Contact
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Gallery Tab */}
-            {activeTab === 'gallery' && (
-              <div className="space-y-8">
-                {/* Upload Guidelines */}
-                <div className="bg-primary-container/20 border border-primary-container rounded-xl p-6">
-                  <h3 className="heading-5 mb-4 text-on-surface">📸 Photo Upload Guide</h3>
-                  <div className="grid md:grid-cols-2 gap-6 text-sm">
-                    <div>
-                      <p className="font-medium text-on-surface mb-2">✓ Recommended Photos:</p>
-                      <ul className="space-y-1 text-on-surface-variant">
-                        <li>• Couple portrait (for cover)</li>
-                        <li>• Ceremony moments</li>
-                        <li>• Reception highlights</li>
-                        <li>• Venue shots</li>
-                        <li>• Detail shots (decorations)</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <p className="font-medium text-on-surface mb-2">📋 File Requirements:</p>
-                      <ul className="space-y-1 text-on-surface-variant">
-                        <li>• Format: JPG, PNG, WebP</li>
-                        <li>• Size: 2-10 MB per image</li>
-                        <li>• Recommended: 1200x800px+</li>
-                        <li>• Min 4-6 photos for gallery</li>
-                        <li>• 1 cover photo (landscape)</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Cover Photo */}
-                <div>
-                  <label className="label-caps mb-4">Cover Photo (Hero Image)</label>
-                  <div className="border-2 border-dashed border-outline-variant rounded-xl p-8 text-center cursor-pointer hover:bg-surface-container-low transition-colors">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        if (e.target.files?.[0]) {
-                          const file = e.target.files[0];
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            setFormData((prev) => ({
-                              ...prev,
-                              coverImage: event.target?.result as string,
-                            }));
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                      disabled={uploadingImages}
-                      className="hidden"
-                      id="cover-upload"
-                    />
-                    <label htmlFor="cover-upload" className="cursor-pointer block">
-                      {formData.coverImage ? (
-                        <div>
-                          <img src={formData.coverImage} alt="Cover" className="w-full h-48 object-cover rounded-lg mb-4" />
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setFormData((prev) => ({ ...prev, coverImage: undefined }));
-                            }}
-                            className="text-sm text-error hover:text-error/80 font-medium"
-                          >
-                            Change Cover Photo
-                          </button>
-                        </div>
-                      ) : (
-                        <div>
-                          <p className="text-5xl mb-4">🎞️</p>
-                          <p className="text-sm font-medium text-on-surface mb-2">
-                            Select your best couple photo
-                          </p>
-                          <p className="text-xs text-on-surface-variant">
-                            This will be shown on your wedding page hero section
-                          </p>
-                        </div>
-                      )}
-                    </label>
-                  </div>
-                </div>
-
-                {/* Gallery Photos */}
-                <div>
-                  <label className="label-caps mb-4">Gallery Photos</label>
-                  <div className="border-2 border-dashed border-outline-variant rounded-xl p-8 text-center cursor-pointer hover:bg-surface-container-low transition-colors">
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      disabled={uploadingImages}
-                      className="hidden"
-                      id="gallery-upload"
-                    />
-                    <label htmlFor="gallery-upload" className="cursor-pointer block">
-                      <p className="text-5xl mb-4">📸</p>
-                      <p className="text-sm font-medium text-on-surface mb-2">
-                        {uploadingImages ? 'Uploading...' : 'Click to upload or drag and drop'}
-                      </p>
-                      <p className="text-xs text-on-surface-variant">
-                        Add 4-10 photos to create a beautiful gallery
-                      </p>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Gallery Grid */}
-                {formData.gallery.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium text-on-surface mb-4">
-                      Gallery ({formData.gallery.length}/10)
-                    </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                      {formData.gallery.map((imageUrl, index) => (
-                        <div key={index} className="relative group">
-                          <img
-                            src={imageUrl}
-                            alt={`Gallery ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-lg"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeGalleryImage(index)}
-                            className="absolute top-2 right-2 bg-error text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            ✕
-                          </button>
-                          <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                            {index + 1}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {formData.gallery.length < 4 && (
-                      <p className="text-xs text-on-surface-variant mt-4">
-                        💡 Tip: Upload at least 4 photos for a complete gallery
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Submit Button */}
-            <div className="mt-8 flex gap-4">
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 bg-primary text-white px-6 py-4 rounded-xl font-semibold text-sm uppercase tracking-wider hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity shadow-lg"
-              >
-                {loading ? 'Creating Wedding...' : 'Create Wedding'}
-              </button>
-            </div>
-          </form>
-        </div>
+          <div className="h-20"></div>
+        </main>
       </div>
     </div>
   );
