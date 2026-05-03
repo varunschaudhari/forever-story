@@ -55,47 +55,101 @@ export const contactSchema = z.object({
   email: z.string().email('Invalid email').optional().or(z.literal('')),
 });
 
+export const multiLangStringSchema = z.object({
+  en: z.string().min(1, 'English text is required').max(100),
+  mr: z.string().min(1, 'Marathi text is required').max(100),
+  hi: z.string().min(1, 'Hindi text is required').max(100),
+});
+
+export const parentsSchema = z.object({
+  fatherName: z.string().min(1, 'Father name is required').max(100),
+  motherName: z.string().min(1, 'Mother name is required').max(100),
+});
+
+export const ceremonySchema = z.object({
+  name: z.enum(['Sakarpuda', 'Haldi', 'Mehendi', 'Vivah']),
+  enabled: z.boolean().default(false),
+  date: z.string().optional(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  address: z.string().max(200).optional(),
+  city: z.string().max(50).optional(),
+});
+
+export const galleryAlbumSchema = z.object({
+  albumName: z.string().min(1).max(100),
+  photos: z.array(z.string()),
+});
+
+export const socialLinksSchema = z.object({
+  whatsapp: z.string().optional(),
+  facebook: z.string().optional(),
+  instagram: z.string().optional(),
+  twitter: z.string().optional(),
+  youtube: z.string().optional(),
+}).optional();
+
+export const themeSchema = z.object({
+  themeId: z.string().min(1),
+  fontStyle: z.enum(['serif', 'sans']),
+}).optional();
+
+export const photosSchema = z.object({
+  cover: z.string().optional(),
+  groom: z.string().optional(),
+  bride: z.string().optional(),
+  couple: z.string().optional(),
+}).optional();
+
 export const weddingCreateSchema = z.object({
   slug: z.string()
     .min(1, 'Wedding slug is required')
     .max(100, 'Slug cannot exceed 100 characters')
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must contain only lowercase letters, numbers, and hyphens'),
-  groomName: z.string().min(1, 'Groom name is required').max(100),
-  brideName: z.string().min(1, 'Bride name is required').max(100),
-  title: z.string().min(1, 'Title is required').max(200),
+  groomName: multiLangStringSchema,
+  brideName: multiLangStringSchema,
+  title: multiLangStringSchema,
   description: z.string().max(2000).optional(),
-  coverImage: z.string().optional(),
+  photos: photosSchema,
   date: z.string(),
   storyType: z.enum(['wedding', 'engagement', 'bridal_shower']).default('wedding'),
   venue: venueSchema,
+  groomParents: parentsSchema.optional(),
+  brideParents: parentsSchema.optional(),
+  ceremonies: z.array(ceremonySchema).optional(),
   events: z.array(eventSchema).optional(),
-  gallery: z.array(z.string()).optional(),
+  galleryAlbums: z.array(galleryAlbumSchema).optional(),
   contacts: z.array(contactSchema).optional(),
+  socialLinks: socialLinksSchema,
+  theme: themeSchema,
   guestCount: z.number().int().min(0).default(0),
   budget: z.number().min(0).optional(),
   isPublic: z.boolean().default(false),
-  template: z.string().optional(),
   tags: z.array(z.string().toLowerCase()).optional(),
 }).passthrough();
 
 export const weddingUpdateSchema = z.object({
   slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
-  groomName: z.string().min(1).max(100).optional(),
-  brideName: z.string().min(1).max(100).optional(),
-  title: z.string().min(1).max(200).optional(),
+  groomName: multiLangStringSchema.optional(),
+  brideName: multiLangStringSchema.optional(),
+  title: multiLangStringSchema.optional(),
   description: z.string().max(2000).optional(),
-  coverImage: z.string().optional(),
+  photos: photosSchema,
   date: z.string().optional(),
   storyType: z.enum(['wedding', 'engagement', 'bridal_shower']).optional(),
   venue: venueSchema.partial().optional(),
+  groomParents: parentsSchema.optional(),
+  brideParents: parentsSchema.optional(),
+  ceremonies: z.array(ceremonySchema).optional(),
   events: z.array(eventSchema).optional(),
-  gallery: z.array(z.string()).optional(),
+  galleryAlbums: z.array(galleryAlbumSchema).optional(),
   contacts: z.array(contactSchema).optional(),
+  socialLinks: socialLinksSchema,
+  theme: themeSchema,
   guestCount: z.number().int().min(0).optional(),
   budget: z.number().min(0).optional(),
   isPublic: z.boolean().optional(),
   tags: z.array(z.string().toLowerCase()).optional(),
-  template: z.string().optional(),
 }).passthrough();
 
 export type WeddingCreate = z.infer<typeof weddingCreateSchema>;

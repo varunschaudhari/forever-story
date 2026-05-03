@@ -32,9 +32,16 @@ export default async function PartnerStoriesPage({ searchParams }: { searchParam
   return (
     <div className="p-6 md:p-8 lg:p-12">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl md:text-5xl font-serif text-on-surface mb-2">My Stories</h1>
-        <p className="text-lg text-secondary font-semibold">{stories.length} {filterType === 'all' ? 'total' : filterType.replace('_', ' ')} stories</p>
+      <div className="mb-8 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <h1 className="text-4xl md:text-5xl font-serif text-on-surface mb-2">My Stories</h1>
+          <p className="text-lg text-secondary font-semibold">{stories.length} {filterType === 'all' ? 'total' : filterType.replace('_', ' ')} stories</p>
+        </div>
+        <Link href="/partner/stories/new">
+          <Button variant="gold" size="lg">
+            + Create New Story
+          </Button>
+        </Link>
       </div>
 
       {/* Filter Buttons */}

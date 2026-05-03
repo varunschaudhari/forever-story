@@ -13,132 +13,280 @@ interface WeddingBuilderProps {
   initialData?: Partial<IWedding>;
 }
 
+interface MultiLangString {
+  en: string;
+  mr: string;
+  hi: string;
+}
+
 interface WeddingFormData {
-  groomName: string;
-  brideName: string;
-  title: string;
+  groomName: MultiLangString;
+  brideName: MultiLangString;
+  title: MultiLangString;
   description: string;
   slug: string;
-  coverImage: string;
+  storyType: 'wedding' | 'engagement' | 'bridal_shower';
+  photos: { cover: string; groom: string; bride: string; couple: string };
+  groomParents: { fatherName: string; motherName: string };
+  brideParents: { fatherName: string; motherName: string };
   date: string;
-  venue: {
-    name: string;
+  venue: { name: string; address: string; city: string; state: string; zipCode: string; country: string };
+  ceremonies: Array<{
+    name: 'Sakarpuda' | 'Haldi' | 'Mehendi' | 'Vivah';
+    enabled: boolean;
+    date: string;
+    startTime: string;
+    endTime: string;
     address: string;
     city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  };
-  events: Array<{
-    name: string;
-    type: string;
-    date: string;
-    time: string;
-    location: string;
-    description: string;
   }>;
-  contacts: Array<{
-    name: string;
-    phone: string;
-    email: string;
-    relationship: string;
-  }>;
-  gallery: string[];
+  galleryAlbums: Array<{ albumName: string; photos: string[] }>;
+  socialLinks: { whatsapp: string; facebook: string; instagram: string; twitter: string; youtube: string };
+  theme: { themeId: string; fontStyle: string };
+  events: Array<{ name: string; type: string; date: string; time: string; location: string; description: string }>;
+  contacts: Array<{ name: string; phone: string; email: string; relationship: string }>;
   guestCount: number;
-  template: string;
   isPublic: boolean;
 }
 
 const SECTIONS = [
   { id: 'couple', label: 'Couple', icon: '♡' },
-  { id: 'story', label: 'Story', icon: '✦' },
+  { id: 'family', label: 'Family', icon: '👨‍👩‍👧' },
   { id: 'events', label: 'Events', icon: '📅' },
-  { id: 'contacts', label: 'Contacts', icon: '📋' },
   { id: 'gallery', label: 'Gallery', icon: '📷' },
-  { id: 'templates', label: 'Templates', icon: '◈' },
+  { id: 'social', label: 'Social', icon: '🔗' },
+  { id: 'theme', label: 'Theme', icon: '🎨' },
+  { id: 'publish', label: 'Publish', icon: '✦' },
 ];
 
-const TEMPLATES = [
-  { id: 'classic', label: 'The Classic', image: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=300&h=400&fit=crop', tags: 'formal · timeless · ornate' },
-  { id: 'modern', label: 'Modern Minimal', image: 'https://images.unsplash.com/photo-1469924935806-f2f038369e73?w=300&h=400&fit=crop', tags: 'clean · contemporary · bold' },
+const PREDEFINED_CEREMONIES = [
+  { name: 'Sakarpuda' as const, icon: '💍', description: 'Engagement ceremony' },
+  { name: 'Haldi' as const, icon: '🌸', description: 'Turmeric ceremony' },
+  { name: 'Mehendi' as const, icon: '🌿', description: 'Henna ceremony' },
+  { name: 'Vivah' as const, icon: '🔥', description: 'Wedding ceremony' },
+];
+
+const PREDEFINED_THEMES = [
+  { id: 'traditional', label: 'Traditional', colors: ['#8B1A1A', '#D4AF37'] },
+  { id: 'modern', label: 'Modern', colors: ['#1A1A2E', '#E94560'] },
+  { id: 'gold', label: 'Gold', colors: ['#B8860B', '#FFF8DC'] },
+  { id: 'rose', label: 'Rose', colors: ['#FF69B4', '#FFF0F5'] },
+];
+
+const FONT_STYLES = [
+  { id: 'serif', label: 'Traditional Serif' },
+  { id: 'sans', label: 'Modern Sans-serif' },
 ];
 
 const normalizeFormData = (data?: Partial<IWedding>): WeddingFormData => {
   if (!data) {
     return {
-      groomName: '',
-      brideName: '',
-      title: '',
+      groomName: { en: '', mr: '', hi: '' },
+      brideName: { en: '', mr: '', hi: '' },
+      title: { en: '', mr: '', hi: '' },
       description: '',
       slug: '',
-      coverImage: '',
+      storyType: 'wedding',
+      photos: { cover: '', groom: '', bride: '', couple: '' },
+      groomParents: { fatherName: '', motherName: '' },
+      brideParents: { fatherName: '', motherName: '' },
       date: new Date().toISOString().slice(0, 10),
-      venue: {
-        name: '',
+      venue: { name: '', address: '', city: '', state: '', zipCode: '', country: '' },
+      ceremonies: PREDEFINED_CEREMONIES.map(c => ({
+        name: c.name,
+        enabled: false,
+        date: '',
+        startTime: '',
+        endTime: '',
         address: '',
         city: '',
-        state: '',
-        zipCode: '',
-        country: '',
-      },
+      })),
+      galleryAlbums: [
+        { albumName: 'Captured Moments', photos: [] },
+        { albumName: 'Memories', photos: [] },
+      ],
+      socialLinks: { whatsapp: '', facebook: '', instagram: '', twitter: '', youtube: '' },
+      theme: { themeId: 'traditional', fontStyle: 'serif' },
       events: [],
       contacts: [],
-      gallery: [],
       guestCount: 0,
-      template: 'classic',
       isPublic: false,
     };
   }
 
-  const dateStr = data.date instanceof Date ? data.date.toISOString().slice(0, 10) : typeof data.date === 'string' ? (data.date as string).slice(0, 10) : new Date().toISOString().slice(0, 10);
+  const dateStr =
+    data.date instanceof Date
+      ? data.date.toISOString().slice(0, 10)
+      : typeof data.date === 'string'
+      ? (data.date as string).slice(0, 10)
+      : new Date().toISOString().slice(0, 10);
 
   return {
-    groomName: data.groomName || '',
-    brideName: data.brideName || '',
-    title: data.title || '',
+    groomName: data.groomName || { en: '', mr: '', hi: '' },
+    brideName: data.brideName || { en: '', mr: '', hi: '' },
+    title: data.title || { en: '', mr: '', hi: '' },
     description: data.description || '',
     slug: data.slug || '',
-    coverImage: data.coverImage || '',
+    storyType: (data.storyType as any) || 'wedding',
+    photos: data.photos || { cover: '', groom: '', bride: '', couple: '' },
+    groomParents: data.groomParents || { fatherName: '', motherName: '' },
+    brideParents: data.brideParents || { fatherName: '', motherName: '' },
     date: dateStr,
-    venue: {
-      name: data.venue?.name || '',
-      address: data.venue?.address || '',
-      city: data.venue?.city || '',
-      state: data.venue?.state || '',
-      zipCode: data.venue?.zipCode || '',
-      country: data.venue?.country || '',
-    },
-    events: (data.events || []).map((e: any) => ({
-      name: e.name || '',
-      type: e.type || 'reception',
-      date: e.date instanceof Date ? e.date.toISOString().slice(0, 10) : typeof e.date === 'string' ? e.date.slice(0, 10) : dateStr,
-      time: e.time || '18:00',
-      location: e.location || '',
-      description: e.description || '',
-    })),
-    contacts: (data.contacts || []).map((c: any) => ({
-      name: c.name || '',
-      phone: c.phone || '',
-      email: c.email || '',
-      relationship: c.relationship || '',
-    })),
-    gallery: data.gallery || [],
+    venue: data.venue || { name: '', address: '', city: '', state: '', zipCode: '', country: '' },
+    ceremonies:
+      data.ceremonies?.length
+        ? data.ceremonies
+        : PREDEFINED_CEREMONIES.map(c => ({
+            name: c.name,
+            enabled: false,
+            date: '',
+            startTime: '',
+            endTime: '',
+            address: '',
+            city: '',
+          })),
+    galleryAlbums: data.galleryAlbums?.length
+      ? data.galleryAlbums
+      : [
+          { albumName: 'Captured Moments', photos: [] },
+          { albumName: 'Memories', photos: [] },
+        ],
+    socialLinks: data.socialLinks || { whatsapp: '', facebook: '', instagram: '', twitter: '', youtube: '' },
+    theme: data.theme || { themeId: 'traditional', fontStyle: 'serif' },
+    events: data.events || [],
+    contacts: data.contacts || [],
     guestCount: data.guestCount || 0,
-    template: data.template || 'classic',
     isPublic: data.isPublic || false,
   };
 };
 
+function MultiLangInput({
+  fieldName,
+  value,
+  onUpdate,
+  maxLength = 100,
+}: {
+  fieldName: string;
+  value: MultiLangString;
+  onUpdate: (lang: 'en' | 'mr' | 'hi', val: string) => void;
+  maxLength?: number;
+}) {
+  const [activeTab, setActiveTab] = useState<'en' | 'mr' | 'hi'>('en');
+
+  return (
+    <div className="mb-4">
+      <label className="block text-sm font-semibold text-on-surface mb-2 capitalize">{fieldName}</label>
+      <div className="flex gap-2 mb-2 border-b border-outline-variant">
+        {(['en', 'mr', 'hi'] as const).map((lang) => (
+          <button
+            key={lang}
+            onClick={() => setActiveTab(lang)}
+            className={`px-3 py-2 text-sm font-medium transition-colors ${
+              activeTab === lang
+                ? 'text-secondary border-b-2 border-secondary -mb-0.5'
+                : 'text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            {lang === 'en' ? 'EN' : lang === 'mr' ? 'मर' : 'हि'}
+          </button>
+        ))}
+      </div>
+      <input
+        type="text"
+        value={value[activeTab]}
+        onChange={(e) => onUpdate(activeTab, e.target.value.slice(0, maxLength))}
+        placeholder={`${fieldName} in ${activeTab === 'en' ? 'English' : activeTab === 'mr' ? 'Marathi' : 'Hindi'}`}
+        maxLength={maxLength}
+        className="input-field w-full"
+      />
+      <p className="text-xs text-on-surface-variant mt-1">
+        {value[activeTab].length} / {maxLength}
+      </p>
+    </div>
+  );
+}
+
+function PhotoUploadSlot({
+  label,
+  value,
+  onUpload,
+  uploading,
+}: {
+  label: string;
+  value: string;
+  onUpload: (url: string) => void;
+  uploading: boolean;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('files', file);
+
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (res.ok && data.urls) {
+        onUpload(data.urls[0]);
+      }
+    } catch (err) {
+      console.error('Upload failed:', err);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+      <button
+        onClick={() => inputRef.current?.click()}
+        disabled={uploading}
+        className="w-full aspect-square bg-stone-50 border-2 border-dashed border-outline-variant rounded-lg hover:border-secondary transition-colors disabled:opacity-50 flex items-center justify-center flex-col gap-2"
+      >
+        {value ? (
+          <>
+            <img src={value} alt={label} className="w-full h-full object-cover rounded-lg" />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpload('');
+              }}
+              className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
+            >
+              ×
+            </button>
+          </>
+        ) : uploading ? (
+          <>
+            <span className="animate-spin">⟳</span>
+            <span className="text-xs text-on-surface-variant">Uploading...</span>
+          </>
+        ) : (
+          <>
+            <span className="text-3xl">📸</span>
+            <span className="text-xs font-medium text-on-surface-variant text-center px-2">{label}</span>
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
+
 export default function WeddingBuilder({ weddingId, initialData }: WeddingBuilderProps) {
   const router = useRouter();
   const [formData, setFormData] = useState<WeddingFormData>(normalizeFormData(initialData));
-
   const [activeSection, setActiveSection] = useState('couple');
   const [saving, setSaving] = useState(false);
-  const [uploadingCover, setUploadingCover] = useState(false);
-  const [uploadingGallery, setUploadingGallery] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [weddingTime, setWeddingTime] = useState('18:00');
+  const [uploadingPhotos, setUploadingPhotos] = useState<Record<string, boolean>>({});
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   useEffect(() => {
@@ -161,25 +309,6 @@ export default function WeddingBuilder({ weddingId, initialData }: WeddingBuilde
     return () => observer.disconnect();
   }, []);
 
-  const uploadFiles = useCallback(async (files: FileList): Promise<string[]> => {
-    const formDataObj = new FormData();
-    Array.from(files).forEach((file) => formDataObj.append('files', file));
-
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      body: formDataObj,
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      const errorMsg = data.error || `Upload failed with status ${res.status}`;
-      throw new Error(errorMsg);
-    }
-
-    return data.urls || [];
-  }, []);
-
   const scrollToSection = useCallback((sectionId: string) => {
     const element = sectionRefs.current[sectionId];
     if (element) {
@@ -188,84 +317,75 @@ export default function WeddingBuilder({ weddingId, initialData }: WeddingBuilde
     }
   }, []);
 
-  const updateField = useCallback(
-    (field: string, value: any) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
-    },
-    []
-  );
-
-  const updateVenue = useCallback(
-    (field: string, value: string) => {
-      setFormData((prev) => ({
-        ...prev,
-        venue: { ...prev.venue, [field]: value },
-      }));
-    },
-    []
-  );
-
-  const updateEvent = useCallback(
-    (index: number, field: string, value: any) => {
-      setFormData((prev) => ({
-        ...prev,
-        events: prev.events.map((e, i) =>
-          i === index ? { ...e, [field]: value } : e
-        ),
-      }));
-    },
-    []
-  );
-
-  const addEvent = useCallback(() => {
+  const updateMultiLangField = (
+    field: 'groomName' | 'brideName' | 'title',
+    lang: 'en' | 'mr' | 'hi',
+    value: string
+  ) => {
     setFormData((prev) => ({
       ...prev,
-      events: [
-        ...prev.events,
-        { name: '', type: 'reception', date: formData.date, time: '18:00', location: '', description: '' },
-      ],
+      [field]: { ...prev[field], [lang]: value },
     }));
-  }, [formData.date]);
+  };
 
-  const removeEvent = useCallback((index: number) => {
+  const updateField = (field: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateVenue = (field: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
-      events: prev.events.filter((_, i) => i !== index),
+      venue: { ...prev.venue, [field]: value },
     }));
-  }, []);
+  };
 
-  const updateContact = useCallback(
-    (index: number, field: string, value: string) => {
-      setFormData((prev) => ({
-        ...prev,
-        contacts: prev.contacts.map((c, i) =>
-          i === index ? { ...c, [field]: value } : c
-        ),
-      }));
-    },
-    []
-  );
-
-  const addContact = useCallback(() => {
+  const updateCeremony = (index: number, field: string, value: any) => {
     setFormData((prev) => ({
       ...prev,
-      contacts: [...prev.contacts, { name: '', phone: '', email: '', relationship: '' }],
+      ceremonies: prev.ceremonies.map((c, i) => (i === index ? { ...c, [field]: value } : c)),
     }));
-  }, []);
+  };
 
-  const removeContact = useCallback((index: number) => {
+  const updateGalleryAlbum = (index: number, field: string, value: any) => {
     setFormData((prev) => ({
       ...prev,
-      contacts: prev.contacts.filter((_, i) => i !== index),
+      galleryAlbums: prev.galleryAlbums.map((a, i) => (i === index ? { ...a, [field]: value } : a)),
     }));
-  }, []);
+  };
 
-  const removeGalleryImage = useCallback((index: number) => {
+  const updateSocialLinks = (platform: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
-      gallery: prev.gallery.filter((_, i) => i !== index),
+      socialLinks: { ...prev.socialLinks, [platform]: value },
     }));
-  }, []);
+  };
+
+  const updateTheme = (field: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      theme: { ...prev.theme, [field]: value },
+    }));
+  };
+
+  const uploadPhotoToAlbum = async (albumIndex: number, file: File) => {
+    setUploadingPhotos((prev) => ({ ...prev, [`album-${albumIndex}`]: true }));
+    try {
+      const formData = new FormData();
+      formData.append('files', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (res.ok && data.urls) {
+        updateGalleryAlbum(albumIndex, 'photos', [
+          ...formData.galleryAlbums[albumIndex].photos,
+          data.urls[0],
+        ]);
+      }
+    } catch (err) {
+      console.error('Upload failed:', err);
+    } finally {
+      setUploadingPhotos((prev) => ({ ...prev, [`album-${albumIndex}`]: false }));
+    }
+  };
 
   const handleSave = useCallback(
     async (publish = false) => {
@@ -273,8 +393,15 @@ export default function WeddingBuilder({ weddingId, initialData }: WeddingBuilde
         setSaving(true);
         setError(null);
 
+        const slug = formData.slug || `${formData.groomName.en}-${formData.brideName.en}`
+          .toLowerCase()
+          .replace(/\s+/g, '-')
+          .replace(/[^a-z0-9-]/g, '');
+        const finalSlug = `${slug}-${Date.now().toString(36)}`;
+
         const payload = {
           ...formData,
+          slug: weddingId ? formData.slug : finalSlug,
           isPublic: publish,
         };
 
@@ -287,34 +414,26 @@ export default function WeddingBuilder({ weddingId, initialData }: WeddingBuilde
 
           if (!res.ok) {
             const data = await res.json();
-            throw new Error(data.message || 'Failed to save wedding');
+            throw new Error(data.message || 'Failed to save');
           }
-        } else {
-          const slug = formData.slug || `${formData.groomName}-${formData.brideName}`
-            .toLowerCase()
-            .replace(/\s+/g, '-')
-            .replace(/[^a-z0-9-]/g, '');
 
+          setSaving(false);
+        } else {
           const res = await fetch('/api/weddings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              ...payload,
-              slug,
-            }),
+            body: JSON.stringify(payload),
           });
 
           if (!res.ok) {
             const data = await res.json();
-            throw new Error(data.message || 'Failed to create wedding');
+            throw new Error(data.message || 'Failed to create');
           }
 
           const data = await res.json();
-          router.push(`/weddings/${data.data._id}/edit`);
+          router.push(`/partner/stories/${data.data._id}/edit`);
           return;
         }
-
-        setSaving(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
         setSaving(false);
@@ -327,7 +446,7 @@ export default function WeddingBuilder({ weddingId, initialData }: WeddingBuilde
     if (typeof v === 'string') return v.trim().length > 0;
     if (typeof v === 'object' && v !== null) {
       if (Array.isArray(v)) return v.length > 0;
-      return Object.values(v).some((val) => typeof val === 'string' && val.trim());
+      return Object.values(v).some((val) => (typeof val === 'string' ? val.trim() : val));
     }
     return false;
   }).length;
@@ -337,26 +456,13 @@ export default function WeddingBuilder({ weddingId, initialData }: WeddingBuilde
   return (
     <div className="fixed inset-0 z-50 bg-surface flex flex-col overflow-hidden">
       <header className="h-16 border-b border-outline-variant flex items-center justify-between px-6 bg-white">
+        <button
+          onClick={() => router.back()}
+          className="text-on-surface-variant hover:text-on-surface transition-colors mr-4"
+        >
+          ← Back
+        </button>
         <div className="text-2xl font-serif italic text-on-surface">ForeverStory</div>
-        <div className="flex items-center gap-8">
-          <nav className="hidden md:flex gap-6">
-            <span className="text-sm uppercase tracking-widest text-on-surface font-semibold cursor-pointer">
-              Builder
-            </span>
-            {formData.groomName && formData.brideName && (
-              <Link
-                href={`/weddings/${formData.slug || `${formData.groomName}-${formData.brideName}`.toLowerCase().replace(/\s+/g, '-')}`}
-                target="_blank"
-                className="text-sm uppercase tracking-widest text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-              >
-                Preview
-              </Link>
-            )}
-            <span className="text-sm uppercase tracking-widest text-on-surface-variant cursor-pointer">
-              Account
-            </span>
-          </nav>
-        </div>
         <div className="flex gap-4">
           <Button variant="outline" size="md" onClick={() => handleSave(false)} disabled={saving}>
             {saving ? 'Saving...' : 'Save Draft'}
@@ -370,7 +476,7 @@ export default function WeddingBuilder({ weddingId, initialData }: WeddingBuilde
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-64 bg-stone-50 border-r border-stone-200 overflow-y-auto flex flex-col p-6">
           <div className="mb-8">
-            <h3 className="heading-5 text-on-surface mb-2">The Heirloom</h3>
+            <h3 className="heading-5 text-on-surface mb-2">Progress</h3>
             <div className="w-full bg-stone-200 rounded-full h-2 mb-2">
               <div
                 className="bg-secondary h-2 rounded-full transition-all duration-300"
@@ -385,425 +491,569 @@ export default function WeddingBuilder({ weddingId, initialData }: WeddingBuilde
               <button
                 key={section.id}
                 onClick={() => scrollToSection(section.id)}
-                className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 ${
+                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${
                   activeSection === section.id
-                    ? 'bg-primary-container border-l-2 border-secondary text-on-surface font-semibold'
-                    : 'text-on-surface-variant hover:bg-stone-100'
+                    ? 'bg-secondary text-white'
+                    : 'text-on-surface hover:bg-stone-100'
                 }`}
               >
-                <span className="text-lg">{section.icon}</span>
-                <span className="text-sm uppercase tracking-widest">{section.label}</span>
+                <span className="mr-2">{section.icon}</span> {section.label}
               </button>
             ))}
           </nav>
-
-          <Button variant="ghost" size="md" className="w-full justify-center text-sm uppercase tracking-widest">
-            Preview Site
-          </Button>
         </aside>
 
-        <main className="flex-1 overflow-y-auto px-12 py-16 max-w-5xl mx-auto w-full">
-          <h1 className="heading-3 italic text-center mb-20 text-primary">Crafting Your Legacy</h1>
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-2xl mx-auto p-8">
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {error}
+              </div>
+            )}
 
-          {error && (
-            <div className="mb-8 p-4 bg-error-container border border-error rounded-lg">
-              <p className="text-sm text-error">{error}</p>
-            </div>
-          )}
+            {/* Couple Section */}
+            <section
+              ref={(el) => {
+                if (el) sectionRefs.current['couple'] = el;
+              }}
+              id="couple"
+              className="mb-12"
+            >
+              <h2 className="heading-3 text-on-surface mb-6">♡ Couple Details</h2>
 
-          <section
-            id="couple"
-            ref={(el) => {
-              if (el) sectionRefs.current['couple'] = el;
-            }}
-            className="mb-20"
-          >
-            <h2 className="heading-5 mb-8 flex items-center gap-3">
-              <span>♡</span> The Couple
-            </h2>
-            <div className="grid md:grid-cols-2 gap-8 mb-8">
-              <Input
-                label="Groom's Name"
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-on-surface mb-3">Story Type</label>
+                <div className="flex gap-3">
+                  {[
+                    { value: 'wedding', label: '💍 Wedding' },
+                    { value: 'engagement', label: '💎 Engagement' },
+                    { value: 'bridal_shower', label: '🎉 Bridal Shower' },
+                  ].map((type) => (
+                    <button
+                      key={type.value}
+                      onClick={() => updateField('storyType', type.value)}
+                      className={`px-4 py-2 rounded-full font-semibold text-sm transition-all ${
+                        formData.storyType === type.value
+                          ? 'bg-secondary text-white'
+                          : 'border border-outline-variant text-on-surface hover:bg-surface-container'
+                      }`}
+                    >
+                      {type.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <MultiLangInput
+                fieldName="Groom Name"
                 value={formData.groomName}
-                onChange={(e) => updateField('groomName', e.target.value)}
-                placeholder="e.g. Julian Montgomery"
+                onUpdate={(lang, val) => updateMultiLangField('groomName', lang, val)}
               />
-              <Input
-                label="Bride's Name"
+
+              <MultiLangInput
+                fieldName="Bride Name"
                 value={formData.brideName}
-                onChange={(e) => updateField('brideName', e.target.value)}
-                placeholder="e.g. Elena Vane"
+                onUpdate={(lang, val) => updateMultiLangField('brideName', lang, val)}
               />
-            </div>
 
-            <div className="card-base p-8">
-              {formData.coverImage ? (
-                <div className="relative">
-                  <img
-                    src={formData.coverImage}
-                    alt="Cover"
-                    className="w-full aspect-[4/5] object-cover rounded-lg"
-                  />
-                  <button
-                    onClick={() => updateField('coverImage', '')}
-                    className="absolute top-2 right-2 bg-error text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-error/90"
-                  >
-                    ×
-                  </button>
-                </div>
-              ) : (
-                <label className="block border-2 border-dashed border-outline-variant rounded-lg p-8 text-center cursor-pointer hover:bg-stone-50 transition-colors">
-                  <div className="text-4xl mb-2">📷</div>
-                  <p className="font-semibold text-on-surface mb-1">Upload Couple Photo</p>
-                  <p className="text-xs text-on-surface-variant">RECOMMENDED: HIGH RESOLUTION EDITORIAL PORTRAIT</p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={async (e) => {
-                      if (e.target.files?.length) {
-                        try {
-                          setUploadingCover(true);
-                          const urls = await uploadFiles(e.target.files);
-                          updateField('coverImage', urls[0]);
-                        } catch (err) {
-                          setError('Failed to upload photo');
-                        } finally {
-                          setUploadingCover(false);
-                        }
-                      }
-                    }}
-                    disabled={uploadingCover}
-                  />
-                </label>
-              )}
-            </div>
-          </section>
-
-          <section
-            id="story"
-            ref={(el) => {
-              if (el) sectionRefs.current['story'] = el;
-            }}
-            className="mb-20"
-          >
-            <h2 className="heading-5 mb-8 flex items-center gap-3">
-              <span>✦</span> Our Story
-            </h2>
-            <div className="max-w-2xl mx-auto">
-              <textarea
-                value={formData.description}
-                onChange={(e) => updateField('description', e.target.value)}
-                placeholder="Tell us your love story... How did you meet? What makes your relationship special?"
-                className="w-full h-32 p-4 border border-outline-variant rounded-lg focus:border-primary focus:outline-none resize-none italic text-on-surface placeholder-on-surface-variant"
+              <MultiLangInput
+                fieldName="Story Title"
+                value={formData.title}
+                onUpdate={(lang, val) => updateMultiLangField('title', lang, val)}
+                maxLength={200}
               />
-            </div>
-          </section>
 
-          <section
-            id="events"
-            ref={(el) => {
-              if (el) sectionRefs.current['events'] = el;
-            }}
-            className="mb-20"
-          >
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="heading-5 flex items-center gap-3">
-                <span>📅</span> The Celebration
-              </h2>
-              <button
-                onClick={addEvent}
-                className="text-sm text-secondary font-semibold uppercase tracking-widest hover:text-secondary/80"
-              >
-                + Add Event
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              <div className="card-base p-8">
-                <div className="flex items-start justify-between mb-4">
-                  <h3 className="font-semibold text-on-surface">The Wedding</h3>
-                  <Badge>main</Badge>
-                </div>
-                <div className="space-y-4">
-                  <Input
-                    label="Wedding Title"
-                    value={formData.title}
-                    onChange={(e) => updateField('title', e.target.value)}
-                    placeholder="e.g. The Wedding of Elena & Julian"
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-on-surface mb-4">Photos</label>
+                <div className="grid grid-cols-1 gap-4">
+                  <PhotoUploadSlot
+                    label="Cover Image"
+                    value={formData.photos.cover}
+                    onUpload={(url) => updateField('photos', { ...formData.photos, cover: url })}
+                    uploading={uploadingPhotos['cover'] || false}
                   />
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <Input
-                      label="Date"
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => updateField('date', e.target.value)}
+                  <div className="grid grid-cols-3 gap-3">
+                    <PhotoUploadSlot
+                      label="Groom"
+                      value={formData.photos.groom}
+                      onUpload={(url) => updateField('photos', { ...formData.photos, groom: url })}
+                      uploading={uploadingPhotos['groom'] || false}
                     />
-                    <Input
-                      label="Time"
-                      type="time"
-                      value={weddingTime}
-                      onChange={(e) => setWeddingTime(e.target.value)}
+                    <PhotoUploadSlot
+                      label="Bride"
+                      value={formData.photos.bride}
+                      onUpload={(url) => updateField('photos', { ...formData.photos, bride: url })}
+                      uploading={uploadingPhotos['bride'] || false}
+                    />
+                    <PhotoUploadSlot
+                      label="Couple"
+                      value={formData.photos.couple}
+                      onUpload={(url) => updateField('photos', { ...formData.photos, couple: url })}
+                      uploading={uploadingPhotos['couple'] || false}
                     />
                   </div>
                 </div>
               </div>
 
-              {formData.events.map((event, index) => (
-                <div key={index} className="card-base p-8 relative">
-                  <button
-                    onClick={() => removeEvent(index)}
-                    className="absolute top-4 right-4 text-on-surface-variant hover:text-error"
-                  >
-                    ×
-                  </button>
-                  <div className="space-y-4">
-                    <Input
-                      label="Event Name"
-                      value={event.name}
-                      onChange={(e) => updateEvent(index, 'name', e.target.value)}
-                      placeholder="e.g. Rehearsal Dinner"
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-on-surface mb-2">Story Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => updateField('description', e.target.value)}
+                  placeholder="Tell the story of your celebration..."
+                  className="input-field w-full h-32"
+                />
+              </div>
+            </section>
+
+            {/* Family Section */}
+            <section
+              ref={(el) => {
+                if (el) sectionRefs.current['family'] = el;
+              }}
+              id="family"
+              className="mb-12"
+            >
+              <h2 className="heading-3 text-on-surface mb-6">👨‍👩‍👧 Family & Venue</h2>
+
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                <div className="card-base p-4">
+                  <h3 className="font-semibold text-on-surface mb-3">Groom's Family</h3>
+                  <div className="mb-3">
+                    <label className="text-sm text-on-surface-variant">Father's Name</label>
+                    <input
+                      type="text"
+                      value={formData.groomParents.fatherName}
+                      onChange={(e) =>
+                        updateField('groomParents', {
+                          ...formData.groomParents,
+                          fatherName: e.target.value,
+                        })
+                      }
+                      className="input-field w-full"
                     />
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <Input
-                        label="Date"
-                        type="date"
-                        value={event.date}
-                        onChange={(e) => updateEvent(index, 'date', e.target.value)}
-                      />
-                      <Input
-                        label="Time"
-                        type="time"
-                        value={event.time}
-                        onChange={(e) => updateEvent(index, 'time', e.target.value)}
-                      />
-                    </div>
-                    <Input
-                      label="Location"
-                      value={event.location}
-                      onChange={(e) => updateEvent(index, 'location', e.target.value)}
-                      placeholder="e.g. Venue Name, City"
-                    />
-                    <textarea
-                      value={event.description}
-                      onChange={(e) => updateEvent(index, 'description', e.target.value)}
-                      placeholder="Event details..."
-                      className="w-full h-20 p-4 border border-outline-variant rounded-lg focus:border-primary focus:outline-none resize-none text-on-surface placeholder-on-surface-variant"
+                  </div>
+                  <div>
+                    <label className="text-sm text-on-surface-variant">Mother's Name</label>
+                    <input
+                      type="text"
+                      value={formData.groomParents.motherName}
+                      onChange={(e) =>
+                        updateField('groomParents', {
+                          ...formData.groomParents,
+                          motherName: e.target.value,
+                        })
+                      }
+                      className="input-field w-full"
                     />
                   </div>
                 </div>
-              ))}
-            </div>
 
-            <div className="mt-8 card-base p-8">
-              <h3 className="font-semibold text-on-surface mb-6">Venue Details</h3>
-              <div className="grid md:grid-cols-2 gap-6">
-                <Input
-                  label="Venue Name"
+                <div className="card-base p-4">
+                  <h3 className="font-semibold text-on-surface mb-3">Bride's Family</h3>
+                  <div className="mb-3">
+                    <label className="text-sm text-on-surface-variant">Father's Name</label>
+                    <input
+                      type="text"
+                      value={formData.brideParents.fatherName}
+                      onChange={(e) =>
+                        updateField('brideParents', {
+                          ...formData.brideParents,
+                          fatherName: e.target.value,
+                        })
+                      }
+                      className="input-field w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-on-surface-variant">Mother's Name</label>
+                    <input
+                      type="text"
+                      value={formData.brideParents.motherName}
+                      onChange={(e) =>
+                        updateField('brideParents', {
+                          ...formData.brideParents,
+                          motherName: e.target.value,
+                        })
+                      }
+                      className="input-field w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="card-base p-4">
+                <h3 className="font-semibold text-on-surface mb-4">Venue & Guest Count</h3>
+                <input
+                  type="text"
+                  placeholder="Venue Name"
                   value={formData.venue.name}
                   onChange={(e) => updateVenue('name', e.target.value)}
-                  placeholder="e.g. Grand Ballroom"
+                  className="input-field w-full mb-3"
                 />
-                <Input
-                  label="Address"
+                <input
+                  type="text"
+                  placeholder="Address"
                   value={formData.venue.address}
                   onChange={(e) => updateVenue('address', e.target.value)}
-                  placeholder="Street address"
+                  className="input-field w-full mb-3"
                 />
-                <Input
-                  label="City"
-                  value={formData.venue.city}
-                  onChange={(e) => updateVenue('city', e.target.value)}
-                  placeholder="City"
-                />
-                <Input
-                  label="State"
-                  value={formData.venue.state}
-                  onChange={(e) => updateVenue('state', e.target.value)}
-                  placeholder="State"
-                />
-                <Input
-                  label="Zip Code"
-                  value={formData.venue.zipCode}
-                  onChange={(e) => updateVenue('zipCode', e.target.value)}
-                  placeholder="Zip code"
-                />
-                <Input
-                  label="Country"
-                  value={formData.venue.country}
-                  onChange={(e) => updateVenue('country', e.target.value)}
-                  placeholder="Country"
-                />
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <input
+                    type="text"
+                    placeholder="City"
+                    value={formData.venue.city}
+                    onChange={(e) => updateVenue('city', e.target.value)}
+                    className="input-field"
+                  />
+                  <input
+                    type="text"
+                    placeholder="State"
+                    value={formData.venue.state}
+                    onChange={(e) => updateVenue('state', e.target.value)}
+                    className="input-field"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    placeholder="Zip Code"
+                    value={formData.venue.zipCode}
+                    onChange={(e) => updateVenue('zipCode', e.target.value)}
+                    className="input-field"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Country"
+                    value={formData.venue.country}
+                    onChange={(e) => updateVenue('country', e.target.value)}
+                    className="input-field"
+                  />
+                </div>
+                <div className="mt-4">
+                  <label className="text-sm font-semibold text-on-surface">Expected Guests</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.guestCount}
+                    onChange={(e) => updateField('guestCount', parseInt(e.target.value) || 0)}
+                    className="input-field w-full"
+                  />
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
 
-          <section
-            id="contacts"
-            ref={(el) => {
-              if (el) sectionRefs.current['contacts'] = el;
-            }}
-            className="mb-20"
-          >
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="heading-5 flex items-center gap-3">
-                <span>📋</span> RSVP & Contacts
-              </h2>
-              <button
-                onClick={addContact}
-                className="text-sm text-secondary font-semibold uppercase tracking-widest hover:text-secondary/80"
+            {/* Events Section - Only for Wedding Story Type */}
+            {formData.storyType === 'wedding' && (
+              <section
+                ref={(el) => {
+                  if (el) sectionRefs.current['events'] = el;
+                }}
+                id="events"
+                className="mb-12"
               >
-                + Add Contact
-              </button>
-            </div>
+                <h2 className="heading-3 text-on-surface mb-6">📅 Wedding Ceremonies</h2>
 
-            <div className="space-y-6">
-              {formData.contacts.map((contact, index) => (
-                <div key={index} className="card-base p-8 relative">
-                  <button
-                    onClick={() => removeContact(index)}
-                    className="absolute top-4 right-4 text-on-surface-variant hover:text-error"
-                  >
-                    ×
-                  </button>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <Input
-                      label="Name"
-                      value={contact.name}
-                      onChange={(e) => updateContact(index, 'name', e.target.value)}
-                      placeholder="Contact name"
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-on-surface mb-2">Wedding Date</label>
+                  <input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => updateField('date', e.target.value)}
+                    className="input-field w-full"
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  {formData.ceremonies.map((ceremony, idx) => (
+                    <div key={ceremony.name} className="card-base p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{PREDEFINED_CEREMONIES[idx].icon}</span>
+                          <div>
+                            <h3 className="font-semibold text-on-surface">{ceremony.name}</h3>
+                            <p className="text-sm text-on-surface-variant">
+                              {PREDEFINED_CEREMONIES[idx].description}
+                            </p>
+                          </div>
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={ceremony.enabled}
+                            onChange={(e) => updateCeremony(idx, 'enabled', e.target.checked)}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm font-medium">Enable</span>
+                        </label>
+                      </div>
+
+                      {ceremony.enabled && (
+                        <div className="space-y-3 pt-4 border-t border-outline-variant">
+                          <input
+                            type="date"
+                            value={ceremony.date}
+                            onChange={(e) => updateCeremony(idx, 'date', e.target.value)}
+                            className="input-field w-full"
+                            placeholder="Date"
+                          />
+                          <div className="grid grid-cols-2 gap-3">
+                            <input
+                              type="time"
+                              value={ceremony.startTime}
+                              onChange={(e) => updateCeremony(idx, 'startTime', e.target.value)}
+                              className="input-field"
+                              placeholder="Start Time"
+                            />
+                            <input
+                              type="time"
+                              value={ceremony.endTime}
+                              onChange={(e) => updateCeremony(idx, 'endTime', e.target.value)}
+                              className="input-field"
+                              placeholder="End Time"
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            value={ceremony.address}
+                            onChange={(e) => updateCeremony(idx, 'address', e.target.value)}
+                            placeholder="Address"
+                            className="input-field w-full"
+                          />
+                          <input
+                            type="text"
+                            value={ceremony.city}
+                            onChange={(e) => updateCeremony(idx, 'city', e.target.value)}
+                            placeholder="City"
+                            className="input-field w-full"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Gallery Section */}
+            <section
+              ref={(el) => {
+                if (el) sectionRefs.current['gallery'] = el;
+              }}
+              id="gallery"
+              className="mb-12"
+            >
+              <h2 className="heading-3 text-on-surface mb-6">📷 Photo Gallery</h2>
+
+              {formData.galleryAlbums.map((album, albumIdx) => (
+                <div key={albumIdx} className="mb-8 card-base p-4">
+                  <h3 className="font-semibold text-on-surface mb-4">{album.albumName}</h3>
+                  <div className="grid grid-cols-4 gap-3 mb-4">
+                    {album.photos.map((photo, photoIdx) => (
+                      <div key={photoIdx} className="relative">
+                        <img
+                          src={photo}
+                          alt={`${album.albumName} - ${photoIdx}`}
+                          className="w-full h-24 object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => {
+                            updateGalleryAlbum(albumIdx, 'photos', album.photos.filter((_, i) => i !== photoIdx));
+                          }}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadPhotoToAlbum(albumIdx, file);
+                      }}
+                      className="hidden"
                     />
-                    <Input
-                      label="Relationship"
-                      value={contact.relationship}
-                      onChange={(e) => updateContact(index, 'relationship', e.target.value)}
-                      placeholder="e.g. Bridesmaid, Groomsman"
-                    />
-                    <Input
-                      label="Phone"
-                      type="tel"
-                      value={contact.phone}
-                      onChange={(e) => updateContact(index, 'phone', e.target.value)}
-                      placeholder="Phone number"
-                    />
-                    <Input
-                      label="Email"
-                      type="email"
-                      value={contact.email}
-                      onChange={(e) => updateContact(index, 'email', e.target.value)}
-                      placeholder="Email address"
+                    <div className="border-2 border-dashed border-outline-variant rounded-lg p-4 text-center cursor-pointer hover:bg-surface-container transition-colors">
+                      <span className="text-2xl">+</span>
+                      <p className="text-sm text-on-surface-variant">Add photos</p>
+                    </div>
+                  </label>
+                </div>
+              ))}
+            </section>
+
+            {/* Social Section */}
+            <section
+              ref={(el) => {
+                if (el) sectionRefs.current['social'] = el;
+              }}
+              id="social"
+              className="mb-12"
+            >
+              <h2 className="heading-3 text-on-surface mb-6">🔗 Social Links</h2>
+
+              <div className="space-y-4">
+                {[
+                  { key: 'whatsapp', icon: '📱', label: 'WhatsApp' },
+                  { key: 'facebook', icon: '📘', label: 'Facebook' },
+                  { key: 'instagram', icon: '📷', label: 'Instagram' },
+                  { key: 'twitter', icon: '🐦', label: 'Twitter/X' },
+                  { key: 'youtube', icon: '▶️', label: 'YouTube' },
+                ].map(({ key, icon, label }) => (
+                  <div key={key}>
+                    <label className="text-sm font-semibold text-on-surface">
+                      {icon} {label}
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.socialLinks[key as keyof typeof formData.socialLinks]}
+                      onChange={(e) => updateSocialLinks(key, e.target.value)}
+                      placeholder={`Your ${label} ${key === 'whatsapp' ? 'number' : 'handle or URL'}`}
+                      className="input-field w-full"
                     />
                   </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Theme Section */}
+            <section
+              ref={(el) => {
+                if (el) sectionRefs.current['theme'] = el;
+              }}
+              id="theme"
+              className="mb-12"
+            >
+              <h2 className="heading-3 text-on-surface mb-6">🎨 Theme & Design</h2>
+
+              <div className="mb-8">
+                <h3 className="font-semibold text-on-surface mb-4">Select Theme</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {PREDEFINED_THEMES.map((theme) => (
+                    <button
+                      key={theme.id}
+                      onClick={() => updateTheme('themeId', theme.id)}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        formData.theme.themeId === theme.id
+                          ? 'border-secondary bg-stone-50'
+                          : 'border-outline-variant hover:border-secondary'
+                      }`}
+                    >
+                      <div className="flex gap-2 mb-2">
+                        {theme.colors.map((color, i) => (
+                          <div
+                            key={i}
+                            className="w-8 h-8 rounded-lg"
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+                      <p className="font-medium text-on-surface text-sm">{theme.label}</p>
+                    </button>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
 
-            <div className="mt-6 card-base p-8">
-              <h3 className="font-semibold text-on-surface mb-4">Guest Count</h3>
-              <Input
-                label="Total Guests"
-                type="number"
-                value={formData.guestCount.toString()}
-                onChange={(e) => updateField('guestCount', parseInt(e.target.value) || 0)}
-                placeholder="0"
-              />
-            </div>
-          </section>
-
-          <section
-            id="gallery"
-            ref={(el) => {
-              if (el) sectionRefs.current['gallery'] = el;
-            }}
-            className="mb-20"
-          >
-            <h2 className="heading-5 mb-8 flex items-center gap-3">
-              <span>📷</span> Moments Captured
-            </h2>
-            <p className="text-on-surface-variant mb-8 text-sm">Share your favorite moments. Upload high-quality photos to showcase your wedding.</p>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <label className="aspect-square border-2 border-dashed border-outline-variant rounded-lg flex items-center justify-center cursor-pointer hover:bg-stone-50 transition-colors">
-                <div className="text-center">
-                  <div className="text-3xl mb-2">+</div>
-                  <p className="text-xs text-on-surface-variant">Upload</p>
+              <div>
+                <h3 className="font-semibold text-on-surface mb-4">Font Style</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {FONT_STYLES.map((font) => (
+                    <button
+                      key={font.id}
+                      onClick={() => updateTheme('fontStyle', font.id)}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        formData.theme.fontStyle === font.id
+                          ? 'border-secondary bg-stone-50'
+                          : 'border-outline-variant hover:border-secondary'
+                      }`}
+                    >
+                      <p
+                        className={`text-2xl font-bold text-on-surface mb-2 ${
+                          font.id === 'serif' ? 'font-serif' : 'font-sans'
+                        }`}
+                      >
+                        Aa
+                      </p>
+                      <p className="text-sm text-on-surface">{font.label}</p>
+                    </button>
+                  ))}
                 </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={async (e) => {
-                    if (e.target.files?.length) {
-                      try {
-                        setUploadingGallery(true);
-                        const urls = await uploadFiles(e.target.files);
-                        updateField('gallery', [...formData.gallery, ...urls]);
-                      } catch (err) {
-                        setError('Failed to upload photos');
-                      } finally {
-                        setUploadingGallery(false);
-                      }
-                    }
-                  }}
-                  disabled={uploadingGallery}
-                />
-              </label>
+              </div>
+            </section>
 
-              {formData.gallery.map((imageUrl, index) => (
-                <div key={index} className="aspect-square relative group">
-                  <img
-                    src={imageUrl}
-                    alt={`Gallery ${index + 1}`}
-                    className="w-full h-full object-cover rounded-lg"
+            {/* Publish Section */}
+            <section
+              ref={(el) => {
+                if (el) sectionRefs.current['publish'] = el;
+              }}
+              id="publish"
+              className="mb-12"
+            >
+              <h2 className="heading-3 text-on-surface mb-6">✦ Publish</h2>
+
+              <div className="card-base p-6 mb-6">
+                <div className="mb-6">
+                  <label className="text-sm font-semibold text-on-surface">Website Slug</label>
+                  <input
+                    type="text"
+                    value={formData.slug}
+                    onChange={(e) => updateField('slug', e.target.value.toLowerCase())}
+                    className="input-field w-full"
                   />
-                  <button
-                    onClick={() => removeGalleryImage(index)}
-                    className="absolute inset-0 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                  >
-                    <span className="text-white text-2xl">×</span>
-                  </button>
+                  <p className="text-xs text-on-surface-variant mt-1">
+                    Website URL will be: /weddings/{formData.slug || 'your-story-slug'}
+                  </p>
                 </div>
-              ))}
-            </div>
-          </section>
 
-          <section
-            id="templates"
-            ref={(el) => {
-              if (el) sectionRefs.current['templates'] = el;
-            }}
-            className="mb-20"
-          >
-            <h2 className="heading-5 italic text-center mb-12">Choose Your Aesthetic</h2>
-
-            <div className="grid md:grid-cols-2 gap-12 max-w-3xl mx-auto">
-              {TEMPLATES.map((tmpl) => (
-                <button
-                  key={tmpl.id}
-                  onClick={() => updateField('template', tmpl.id)}
-                  className={`relative overflow-hidden rounded-xl transition-all ${
-                    formData.template === tmpl.id ? 'ring-2 ring-secondary' : 'hover:shadow-lg'
-                  }`}
-                >
-                  <img
-                    src={tmpl.image}
-                    alt={tmpl.label}
-                    className="w-full aspect-[3/4] object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-3">
-                    <h3 className="text-white font-serif text-xl">{tmpl.label}</h3>
-                    <p className="text-white/80 text-xs">{tmpl.tags}</p>
-                    {formData.template === tmpl.id && (
-                      <Badge className="bg-secondary text-white">Selected</Badge>
-                    )}
+                <div className="flex items-center justify-between p-4 bg-stone-50 rounded-lg">
+                  <div>
+                    <p className="font-semibold text-on-surface">Make this story public?</p>
+                    <p className="text-sm text-on-surface-variant">
+                      {formData.isPublic ? 'Story is published' : 'Story is private (draft)'}
+                    </p>
                   </div>
-                </button>
-              ))}
-            </div>
-          </section>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isPublic}
+                      onChange={(e) => updateField('isPublic', e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                  </label>
+                </div>
 
-          <div className="h-20"></div>
+                <div className="mt-6 p-4 bg-surface-container rounded-lg">
+                  <p className="text-sm font-semibold text-on-surface mb-3">Story Summary</p>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="text-on-surface-variant">Photos</p>
+                      <p className="font-bold text-on-surface">
+                        {Object.values(formData.photos).filter(Boolean).length} / 4
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-on-surface-variant">Ceremonies</p>
+                      <p className="font-bold text-on-surface">
+                        {formData.ceremonies.filter((c) => c.enabled).length} / 4
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-on-surface-variant">Gallery Photos</p>
+                      <p className="font-bold text-on-surface">
+                        {formData.galleryAlbums.reduce((sum, a) => sum + a.photos.length, 0)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <div className="pb-20" />
+          </div>
         </main>
       </div>
     </div>

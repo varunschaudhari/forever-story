@@ -1,6 +1,45 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 import '@/models/User'; // Ensure User model is registered for populate
 
+export interface MultiLangString {
+  en: string;
+  mr: string; // Marathi
+  hi: string; // Hindi
+}
+
+export interface IParents {
+  fatherName: string;
+  motherName: string;
+}
+
+export interface ICeremony {
+  name: 'Sakarpuda' | 'Haldi' | 'Mehendi' | 'Vivah';
+  enabled: boolean;
+  date?: string;
+  startTime?: string;
+  endTime?: string;
+  address?: string;
+  city?: string;
+}
+
+export interface IGalleryAlbum {
+  albumName: string;
+  photos: string[];
+}
+
+export interface ISocialLinks {
+  whatsapp?: string;
+  facebook?: string;
+  instagram?: string;
+  twitter?: string;
+  youtube?: string;
+}
+
+export interface ITheme {
+  themeId: string;
+  fontStyle: 'serif' | 'sans';
+}
+
 export interface IEvent {
   name: string;
   type: string; // 'ceremony', 'reception', 'dinner', 'party', 'custom'
@@ -20,13 +59,18 @@ export interface IContact {
 export interface IWedding extends Document {
   _id: Types.ObjectId;
   slug: string; // Unique wedding slug
-  groomName: string;
-  brideName: string;
-  title: string;
+  groomName: MultiLangString;
+  brideName: MultiLangString;
+  title: MultiLangString;
   description?: string;
   organizers: Types.ObjectId[]; // User IDs
   createdBy?: Types.ObjectId; // Partner who created this wedding
-  coverImage?: string;
+  photos?: {
+    cover?: string;
+    groom?: string;
+    bride?: string;
+    couple?: string;
+  };
   date: Date;
   storyType: 'wedding' | 'engagement' | 'bridal_shower'; // Type of celebration
   venue: {
@@ -41,14 +85,18 @@ export interface IWedding extends Document {
       longitude: number;
     };
   };
+  groomParents?: IParents;
+  brideParents?: IParents;
+  ceremonies?: ICeremony[];
   events?: IEvent[];
-  gallery?: string[]; // Array of image URLs
+  galleryAlbums?: IGalleryAlbum[];
   contacts?: IContact[];
+  socialLinks?: ISocialLinks;
+  theme?: ITheme;
   guestCount: number;
   budget?: number;
   isPublic: boolean;
   tags?: string[];
-  template?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -117,6 +165,63 @@ const contactSchema = new Schema<IContact>(
   { _id: false }
 );
 
+const multiLangStringSchema = new Schema<MultiLangString>(
+  {
+    en: { type: String, required: true, trim: true },
+    mr: { type: String, required: true, trim: true },
+    hi: { type: String, required: true, trim: true },
+  },
+  { _id: false }
+);
+
+const parentsSchema = new Schema<IParents>(
+  {
+    fatherName: { type: String, trim: true },
+    motherName: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
+const ceremonySchema = new Schema<ICeremony>(
+  {
+    name: { type: String, enum: ['Sakarpuda', 'Haldi', 'Mehendi', 'Vivah'], required: true },
+    enabled: { type: Boolean, default: false },
+    date: String,
+    startTime: String,
+    endTime: String,
+    address: String,
+    city: String,
+  },
+  { _id: false }
+);
+
+const galleryAlbumSchema = new Schema<IGalleryAlbum>(
+  {
+    albumName: { type: String, trim: true },
+    photos: [{ type: String }],
+  },
+  { _id: false }
+);
+
+const socialLinksSchema = new Schema<ISocialLinks>(
+  {
+    whatsapp: String,
+    facebook: String,
+    instagram: String,
+    twitter: String,
+    youtube: String,
+  },
+  { _id: false }
+);
+
+const themeSchema = new Schema<ITheme>(
+  {
+    themeId: String,
+    fontStyle: { type: String, enum: ['serif', 'sans'] },
+  },
+  { _id: false }
+);
+
 const weddingSchema = new Schema<IWedding>(
   {
     slug: {
@@ -127,22 +232,9 @@ const weddingSchema = new Schema<IWedding>(
       trim: true,
       match: [/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must contain only lowercase letters, numbers, and hyphens'],
     },
-    groomName: {
-      type: String,
-      required: [true, 'Groom name is required'],
-      trim: true,
-    },
-    brideName: {
-      type: String,
-      required: [true, 'Bride name is required'],
-      trim: true,
-    },
-    title: {
-      type: String,
-      required: [true, 'Please provide a wedding title'],
-      trim: true,
-      maxlength: [200, 'Title cannot be more than 200 characters'],
-    },
+    groomName: multiLangStringSchema,
+    brideName: multiLangStringSchema,
+    title: multiLangStringSchema,
     description: {
       type: String,
       maxlength: [2000, 'Description cannot be more than 2000 characters'],
@@ -158,8 +250,11 @@ const weddingSchema = new Schema<IWedding>(
       type: Schema.Types.ObjectId,
       ref: 'User',
     },
-    coverImage: {
-      type: String,
+    photos: {
+      cover: String,
+      groom: String,
+      bride: String,
+      couple: String,
     },
     storyType: {
       type: String,
@@ -167,14 +262,14 @@ const weddingSchema = new Schema<IWedding>(
       default: 'wedding',
       required: true,
     },
+    groomParents: parentsSchema,
+    brideParents: parentsSchema,
+    ceremonies: [ceremonySchema],
     events: [eventSchema],
-    gallery: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
+    galleryAlbums: [galleryAlbumSchema],
     contacts: [contactSchema],
+    socialLinks: socialLinksSchema,
+    theme: themeSchema,
     date: {
       type: Date,
       required: [true, 'Please provide a wedding date'],
@@ -235,10 +330,6 @@ const weddingSchema = new Schema<IWedding>(
         lowercase: true,
       },
     ],
-    template: {
-      type: String,
-      trim: true,
-    },
   },
   {
     timestamps: true,

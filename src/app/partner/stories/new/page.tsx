@@ -1,5 +1,5 @@
 import WeddingBuilder from '@/components/WeddingBuilder';
 
-export default function CreateWeddingPage() {
+export default function NewPartnerStoryPage() {
   return <WeddingBuilder />;
 }
