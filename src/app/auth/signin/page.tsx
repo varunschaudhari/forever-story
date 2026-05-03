@@ -16,7 +16,7 @@ export default function SignInPage() {
   const [error, setError] = useState('');
 
   const isPartner = role === 'partner';
-  const callbackUrl = isPartner ? '/partner/dashboard' : '/weddings/new';
+  const callbackUrl = isPartner ? '/partner/dashboard' : '/dashboard';
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
