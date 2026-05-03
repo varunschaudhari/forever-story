@@ -57,7 +57,8 @@
       "Bash(rm -rf .next)",
       "Bash(npm run *)",
       "Bash(git commit -m 'Fix sidebar layout to expand page content when collapsed *)",
-      "Bash(git commit -m 'Make page content expand dynamically with sidebar using CSS variables *)"
+      "Bash(git commit -m 'Make page content expand dynamically with sidebar using CSS variables *)",
+      "Bash(git commit -m 'Add story type support: weddings, engagements, bridal showers *)"
     ]
   }
 }

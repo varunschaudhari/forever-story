@@ -28,6 +28,7 @@ export interface IWedding extends Document {
   createdBy?: Types.ObjectId; // Partner who created this wedding
   coverImage?: string;
   date: Date;
+  storyType: 'wedding' | 'engagement' | 'bridal_shower'; // Type of celebration
   venue: {
     name: string;
     address: string;
@@ -160,6 +161,12 @@ const weddingSchema = new Schema<IWedding>(
     coverImage: {
       type: String,
     },
+    storyType: {
+      type: String,
+      enum: ['wedding', 'engagement', 'bridal_shower'],
+      default: 'wedding',
+      required: true,
+    },
     events: [eventSchema],
     gallery: [
       {
@@ -241,6 +248,7 @@ const weddingSchema = new Schema<IWedding>(
 weddingSchema.index({ organizers: 1 });
 weddingSchema.index({ date: 1 });
 weddingSchema.index({ isPublic: 1 });
+weddingSchema.index({ storyType: 1 });
 weddingSchema.index({ 'venue.city': 1 });
 weddingSchema.index({ tags: 1 });
 
