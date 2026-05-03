@@ -18,14 +18,11 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-surface">
-      {/* Sidebar (fixed width) */}
-      <div className="w-16 md:w-64">
-        <DashboardSidebar />
-      </div>
+    <div className="min-h-screen bg-surface">
+      <DashboardSidebar />
 
-      {/* Main Content */}
-      <main className="flex-1">
+      {/* Main Content with margin to account for fixed sidebar */}
+      <main className="ml-20 transition-all duration-300">
         {children}
       </main>
     </div>

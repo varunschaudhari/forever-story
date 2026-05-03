@@ -27,14 +27,11 @@ export default async function PartnerLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-surface">
-      {/* Sidebar (fixed width) */}
-      <div className="w-16 md:w-64">
-        <PartnerSidebar />
-      </div>
+    <div className="min-h-screen bg-surface">
+      <PartnerSidebar />
 
-      {/* Main Content */}
-      <main className="flex-1">
+      {/* Main Content with margin to account for fixed sidebar - always reserve space for collapsed width */}
+      <main className="ml-20 transition-all duration-300">
         {children}
       </main>
     </div>

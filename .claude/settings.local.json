@@ -51,7 +51,12 @@
       "PowerShell($response = Invoke-WebRequest -Uri \"http://localhost:3001/auth/signin?role=customer\" -UseBasicParsing -TimeoutSec 5; $content = $response.Content; if \\($content -match 'meta http-equiv=\"refresh\"'\\) { Write-Host \"Found meta refresh redirect\"; $content | Select-String -Pattern 'meta http-equiv' } elseif \\($content -match 'Welcome Back'\\) { Write-Host \"✓ Signin page content found\"; Write-Host \"Page title: $\\(if \\($content -match '<title>\\([^<]+\\)</title>'\\) { $matches[1] }\\)\" } else { Write-Host \"⚠ Unexpected content\"; Write-Host \"First 500 chars: $\\($content.Substring\\(0, [Math]::Min\\(500, $content.Length\\)\\)\\)\" })",
       "PowerShell($response = Invoke-WebRequest -Uri \"http://localhost:3001/auth/signin?role=customer\" -UseBasicParsing -TimeoutSec 5; $content = $response.Content; Write-Host \"Customer Login badge: $\\(if \\($content -match 'Customer Login'\\) {'✓ FOUND'} else {'✗ NOT FOUND'}\\)\"; Write-Host \"Welcome Back text: $\\(if \\($content -match 'Welcome Back'\\) {'✓ FOUND'} else {'✗ NOT FOUND'}\\)\"; Write-Host \"Email input: $\\(if \\($content -match 'Email Address' -or $content -match 'type=\"email\"'\\) {'✓ FOUND'} else {'✗ NOT FOUND'}\\)\")",
       "Bash(Remove-Item -Path \".next\" -Recurse -Force -ErrorAction SilentlyContinue)",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(pkill -f \"node.*next\")",
+      "Bash(rm -rf .next node_modules/.cache)",
+      "Bash(rm -rf .next)",
+      "Bash(npm run *)",
+      "Bash(git commit -m 'Fix sidebar layout to expand page content when collapsed *)"
     ]
   }
 }
